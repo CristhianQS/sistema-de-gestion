@@ -4,10 +4,11 @@ import GestionAreas from '../components/GestionAreas';
 import GestionPabellones from '../components/GestionPabellones';
 import VisualizarReportes from '../components/VisualizarReportes';
 import GestionAdminOro from '../components/GestionAdminOro';
+import GestionSedes from '../components/GestionSedes';
 
 const VistaBlack: React.FC = () => {
   const { user, logout } = useAuth();
-  const [currentView, setCurrentView] = useState<'dashboard' | 'areas' | 'pabellones' | 'reportes' | 'admin_oro'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'areas' | 'pabellones' | 'reportes' | 'admin_oro' | 'sedes'>('dashboard');
 
   // Vista de Admin Oro
   if (currentView === 'admin_oro') {
@@ -45,10 +46,42 @@ const VistaBlack: React.FC = () => {
     );
   }
 
-  // ... resto del código existente (otras vistas)
+  // Vista de Sedes
+  if (currentView === 'sedes') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800">
+        <header className="bg-black shadow-lg">
+          <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => setCurrentView('dashboard')}
+                className="text-gray-400 hover:text-white"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+              </button>
+              <div>
+                <h1 className="text-xl font-bold text-white">Panel Admin Black</h1>
+                <p className="text-sm text-gray-400">{user?.name || user?.email}</p>
+              </div>
+            </div>
+            <button
+              onClick={logout}
+              className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium"
+            >
+              Cerrar Sesión
+            </button>
+          </div>
+        </header>
 
-  // En el dashboard, actualiza el botón de Admin Oro:
-  // Busca la card "Admin Oro" y cambia su botón por:
+        <main className="max-w-7xl mx-auto px-4 py-8">
+          <GestionSedes />
+        </main>
+      </div>
+    );
+  }
+
   // Vista de Reportes
   if (currentView === 'reportes') {
     return (
@@ -84,6 +117,7 @@ const VistaBlack: React.FC = () => {
       </div>
     );
   }
+  
   // Vista de Pabellones
   if (currentView === 'pabellones') {
     return (
@@ -203,6 +237,24 @@ const VistaBlack: React.FC = () => {
             </button>
           </div>
 
+          {/* Card: Gestionar Sedes */}
+          <div className="bg-gray-800 rounded-lg p-6 shadow-xl border border-gray-700 hover:border-yellow-500 transition-all">
+            <div className="w-12 h-12 bg-indigo-500 rounded-lg flex items-center justify-center mb-4">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">Gestionar Sedes</h3>
+            <p className="text-gray-400 mb-4">Administrar sedes y fondos de pantalla</p>
+            <button
+              onClick={() => setCurrentView('sedes')}
+              className="w-full bg-indigo-500 text-white px-4 py-2 rounded-lg hover:bg-indigo-400 transition-colors font-medium"
+            >
+              Administrar
+            </button>
+          </div>
+
           {/* Card: Gestionar Admin Oro */}
           <div className="bg-gray-800 rounded-lg p-6 shadow-xl border border-gray-700 hover:border-yellow-500 transition-all">
             <div className="w-12 h-12 bg-yellow-600 rounded-lg flex items-center justify-center mb-4">
@@ -213,11 +265,11 @@ const VistaBlack: React.FC = () => {
             <h3 className="text-xl font-bold text-white mb-2">Admin Oro</h3>
             <p className="text-gray-400 mb-4">Gestionar administradores de área</p>
             <button
-  onClick={() => setCurrentView('admin_oro')}
-  className="w-full bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-500 transition-colors font-medium"
->
-  Administrar
-</button>
+              onClick={() => setCurrentView('admin_oro')}
+              className="w-full bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-500 transition-colors font-medium"
+            >
+              Administrar
+            </button>
           </div>
 
           {/* Card: Gestionar Admin Plata */}
@@ -244,11 +296,11 @@ const VistaBlack: React.FC = () => {
             <h3 className="text-xl font-bold text-white mb-2">Reportes</h3>
             <p className="text-gray-400 mb-4">Ver estadísticas y análisis del sistema</p>
             <button
-  onClick={() => setCurrentView('reportes')}
-  className="w-full bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-400 transition-colors font-medium"
->
-  Ver Reportes
-</button>
+              onClick={() => setCurrentView('reportes')}
+              className="w-full bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-400 transition-colors font-medium"
+            >
+              Ver Reportes
+            </button>
           </div>
 
           {/* Card: Configuración (Pabellones) */}

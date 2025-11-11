@@ -3,6 +3,15 @@ import { createClient } from '@supabase/supabase-js';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+export interface Campus {
+  id: string;
+  nombre: string;
+  ciudad: string;
+  imagen_fondo_url: string | null;
+  descripcion: string | null;
+  activo: boolean;
+  creado_en: string;
+}
 // Tipos para TypeScript
 export interface AdminUser {
   id: number;

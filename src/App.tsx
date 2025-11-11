@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ModalLogin from './components/ModalLogin';
 import ModalVerificarAlumno from './components/modals/ModalVerificarAlumno';
 import ModalFormularioArea from './components/modals/ModalFormularioArea';
+import SedeHeader from './components/SedeHeader';
 import { useAuth } from './context/AuthContext';
 import { supabase } from './lib/supabase';
 import VistaBlack from './pages/VistaBlack';
@@ -96,30 +97,24 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-end">
-          <button
-            onClick={() => setIsModalLoginOpen(true)}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium"
-          >
-            Login
-          </button>
-        </div>
-      </header>
+      {/* Header con selector de sede y fondo dinámico */}
+      <SedeHeader 
+        onLoginClick={() => setIsModalLoginOpen(true)}
+        showLoginButton={true}
+      />
 
       {/* Contenido principal */}
-      <main className="max-w-7xl mx-auto px-4 py-12">
+      <main className="max-w-7xl mx-auto px-4 py-8">
         {/* Título */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-blue-600 mb-4">
-            ¡Proyecto React + TypeScript + Tailwind!
+            Sistema de Gestión Universitaria
           </h1>
           <p className="text-gray-600 text-lg mb-2">
-            Sistema de Gestión con Roles de Usuario
+            Selecciona tu sede y completa los formularios
           </p>
           <p className="text-gray-500">
-            Explora nuestras áreas disponibles y completa los formularios
+            Explora nuestras áreas disponibles
           </p>
         </div>
 
@@ -149,9 +144,8 @@ const App: React.FC = () => {
               <div
                 key={area.id}
                 onClick={() => handleAreaClick(area)}
-                className="bg-white rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-1 cursor-pointer"
+                className="bg-white rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all cursor-pointer transform hover:-translate-y-1"
               >
-                {/* Imagen */}
                 <div className="h-48 overflow-hidden bg-gray-200">
                   <img
                     src={area.image_url || 'https://via.placeholder.com/400x300?text=Sin+Imagen'}
@@ -162,23 +156,12 @@ const App: React.FC = () => {
                     }}
                   />
                 </div>
-
-                {/* Contenido */}
                 <div className="p-6">
-                  <h3 className="text-xl font-bold text-gray-800 mb-2">
-                    {area.name}
-                  </h3>
-                  <p className="text-gray-600 text-sm line-clamp-3 mb-4">
-                    {area.description || 'Sin descripción disponible'}
-                  </p>
-
-                  {/* Footer */}
-                  <div className="flex items-center text-blue-600 text-sm font-medium">
-                    <span>Completar formulario</span>
-                    <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
+                  <h3 className="text-xl font-bold text-gray-800 mb-2">{area.name}</h3>
+                  <p className="text-gray-600 text-sm">{area.description || 'Sin descripción'}</p>
+                  <button className="mt-4 w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                    Completar Formulario
+                  </button>
                 </div>
               </div>
             ))}
@@ -186,21 +169,12 @@ const App: React.FC = () => {
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 mt-16">
-        <div className="max-w-7xl mx-auto px-4 py-6 text-center text-gray-600">
-          <p className="text-sm">
-            Sistema de Gestión de Áreas - {new Date().getFullYear()}
-          </p>
-        </div>
-      </footer>
-
-      {/* Modales */}
-      <ModalLogin 
-        isOpen={isModalLoginOpen} 
-        onClose={() => setIsModalLoginOpen(false)} 
+      {/* Modals */}
+      <ModalLogin
+        isOpen={isModalLoginOpen}
+        onClose={() => setIsModalLoginOpen(false)}
       />
-      
+
       {selectedArea && (
         <ModalVerificarAlumno
           isOpen={isModalVerificarOpen}
