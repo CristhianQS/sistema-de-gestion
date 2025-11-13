@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import GestionCamposArea from './GestionCamposArea';
+import SupabaseImageUploader from './SupabaseImageUploader';
 
 interface Area {
   id: number;
@@ -108,7 +109,7 @@ const GestionAreas: React.FC = () => {
     }
 
     if (!formData.image_url.trim()) {
-      setError('La URL de la imagen es requerida');
+      setError('La imagen es requerida');
       return;
     }
 
@@ -285,19 +286,16 @@ const GestionAreas: React.FC = () => {
         </div>
       )}
 
-      {/* Modal de Crear/Editar */}
+      {/* Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl border border-gray-700 my-8">
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl border border-gray-700">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-2xl font-bold text-white">
                   {editingArea ? 'Editar Área' : 'Nueva Área'}
                 </h3>
-                <button
-                  onClick={handleCloseModal}
-                  className="text-gray-400 hover:text-white"
-                >
+                <button onClick={handleCloseModal} className="text-gray-400 hover:text-white">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
@@ -317,10 +315,10 @@ const GestionAreas: React.FC = () => {
               )}
 
               <form onSubmit={handleSubmit} className="space-y-5">
-                {/* Título */}
+                {/* Nombre */}
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Título del Área *
+                    Nombre del Área *
                   </label>
                   <input
                     type="text"
@@ -333,40 +331,6 @@ const GestionAreas: React.FC = () => {
                   />
                 </div>
 
-                {/* URL de Imagen */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    URL de la Imagen *
-                  </label>
-                  <input
-                    type="url"
-                    name="image_url"
-                    value={formData.image_url}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-white placeholder-gray-400"
-                    placeholder="https://ejemplo.com/imagen.jpg"
-                    required
-                  />
-                  <p className="text-xs text-gray-400 mt-1">
-                    Usa servicios como Imgur, Unsplash o sube a tu servidor
-                  </p>
-                  
-                  {/* Vista previa de imagen */}
-                  {formData.image_url && (
-                    <div className="mt-3">
-                      <p className="text-xs text-gray-400 mb-2">Vista previa:</p>
-                      <img
-                        src={formData.image_url}
-                        alt="Vista previa"
-                        className="w-full h-48 object-cover rounded-lg"
-                        onError={(e) => {
-                          e.currentTarget.src = 'https://via.placeholder.com/400x300?text=URL+inválida';
-                        }}
-                      />
-                    </div>
-                  )}
-                </div>
-
                 {/* Descripción */}
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -377,14 +341,22 @@ const GestionAreas: React.FC = () => {
                     value={formData.description}
                     onChange={handleInputChange}
                     rows={4}
-                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-white placeholder-gray-400 resize-none"
-                    placeholder="Describe las funciones y responsabilidades de esta área..."
+                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-white placeholder-gray-400"
+                    placeholder="Ej: Sistemas, Contabilidad, Recursos Humanos..."
                     required
                   />
-                  <p className="text-xs text-gray-400 mt-1">
-                    {formData.description.length} caracteres
-                  </p>
                 </div>
+
+                {/* NUEVO: Componente de Subida de Imágenes con Supabase */}
+                <SupabaseImageUploader
+                  currentImageUrl={formData.image_url}
+                  onImageUploaded={(url) => setFormData({ ...formData, image_url: url })}
+                  onImageRemoved={() => setFormData({ ...formData, image_url: '' })}
+                  folder="areas"
+                  label="Imagen del Área"
+                  required
+                  maxSizeMB={5}
+                />
 
                 <div className="flex space-x-3 pt-4">
                   <button
@@ -398,7 +370,7 @@ const GestionAreas: React.FC = () => {
                     type="submit"
                     className="flex-1 bg-yellow-500 text-black px-4 py-3 rounded-lg hover:bg-yellow-400 transition-colors font-medium"
                   >
-                    {editingArea ? 'Actualizar Área' : 'Crear Área'}
+                    {editingArea ? 'Actualizar' : 'Crear'} Área
                   </button>
                 </div>
               </form>

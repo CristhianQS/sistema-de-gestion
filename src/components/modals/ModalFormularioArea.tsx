@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import ModalSeleccionarUbicacion from './ModalSeleccionarUbicacion';
+import SupabaseImageUploader from '../SupabaseImageUploader';
 
 interface DataAlumno {
   id: number;
@@ -71,6 +72,7 @@ const ModalFormularioArea: React.FC<Props> = ({ isOpen, onClose, areaId, areaNam
   }, [isOpen, areaId]);
 
   const loadFields = async () => {
+    setLoading(true);
     try {
       const { data, error } = await supabase
         .from('area_fields')
@@ -95,61 +97,68 @@ const ModalFormularioArea: React.FC<Props> = ({ isOpen, onClose, areaId, areaNam
     });
   };
 
-  const handleUbicacionSelect = (pabellon: Pabellon, salon: Salon) => {
+  const handleUbicacionSelected = (pabellon: Pabellon, salon: Salon) => {
     setSelectedPabellon(pabellon);
     setSelectedSalon(salon);
+    setIsUbicacionModalOpen(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setSubmitting(true);
+
+    // Validar ubicación
+    if (!selectedPabellon || !selectedSalon) {
+      setError('Debes seleccionar la ubicación del problema (Pabellón y Salón)');
+      return;
+    }
 
     // Validar campos requeridos
     for (const field of fields) {
       if (field.is_required && !formData[field.field_name]) {
         setError(`El campo "${field.field_label}" es obligatorio`);
-        setSubmitting(false);
         return;
       }
     }
 
-    // Validar que se haya seleccionado pabellón y salón
-    if (!selectedPabellon || !selectedSalon) {
-      setError('Debes seleccionar un pabellón y un salón');
-      setSubmitting(false);
-      return;
-    }
+    setSubmitting(true);
 
     try {
-      const submission = {
+      // ✅ CORRECCIÓN: Separar la ubicación de los campos del formulario
+      const submissionData = {
         area_id: areaId,
         alumno_id: alumno.id,
         alumno_dni: alumno.dni || '',
         alumno_codigo: alumno.codigo || 0,
         alumno_nombre: alumno.estudiante || '',
         form_data: {
+          // Campos del formulario dinámico
           ...formData,
+          // Ubicación guardada al mismo nivel (NO como un objeto separado)
           pabellon_id: selectedPabellon.id,
           pabellon_nombre: selectedPabellon.nombre,
+          pabellon_descripcion: selectedPabellon.descripcion,
           salon_id: selectedSalon.id,
-          salon_nombre: selectedSalon.nombre
+          salon_nombre: selectedSalon.nombre,
+          salon_capacidad: selectedSalon.capacidad
         },
         status: 'pending'
       };
 
-      const { error } = await supabase
-        .from('area_submissions')
-        .insert([submission]);
+      console.log('📤 Enviando datos:', submissionData); // Debug
 
-      if (error) throw error;
+      const { error: submitError } = await supabase
+        .from('area_submissions')
+        .insert([submissionData]);
+
+      if (submitError) throw submitError;
 
       setSuccess(true);
       setTimeout(() => {
         handleClose();
       }, 2000);
     } catch (error: any) {
-      console.error('Error:', error);
+      console.error('❌ Error:', error);
       setError(error.message || 'Error al enviar el formulario');
     } finally {
       setSubmitting(false);
@@ -205,7 +214,8 @@ const ModalFormularioArea: React.FC<Props> = ({ isOpen, onClose, areaId, areaNam
         );
 
       case 'select':
-        const options = field.options ? field.options.split('\n').filter(o => o.trim()) : [];
+        const options = field.options ? 
+          field.options.split('\n').filter(o => o.trim()) : [];
         return (
           <select
             value={formData[field.field_name] || ''}
@@ -224,20 +234,18 @@ const ModalFormularioArea: React.FC<Props> = ({ isOpen, onClose, areaId, areaNam
 
       case 'image':
       case 'file':
+        // Usar SupabaseImageUploader
         return (
-          <div>
-            <input
-              type="url"
-              value={formData[field.field_name] || ''}
-              onChange={(e) => handleInputChange(field.field_name, e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder={field.placeholder || 'URL del archivo (https://...)'}
-              required={field.is_required}
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Sube tu archivo a un servicio (Imgur, Google Drive, etc.) y pega la URL
-            </p>
-          </div>
+          <SupabaseImageUploader
+            currentImageUrl={formData[field.field_name] || ''}
+            onImageUploaded={(url) => handleInputChange(field.field_name, url)}
+            onImageRemoved={() => handleInputChange(field.field_name, '')}
+            folder="formularios"
+            label=""
+            required={field.is_required}
+            maxSizeMB={5}
+            allowCamera={true}
+          />
         );
 
       default:
@@ -341,9 +349,11 @@ const ModalFormularioArea: React.FC<Props> = ({ isOpen, onClose, areaId, areaNam
                             <p className="font-bold text-gray-800">
                               {selectedPabellon.nombre} - {selectedSalon.nombre}
                             </p>
-                            <p className="text-sm text-gray-600 mt-1">
-                              {selectedPabellon.descripcion}
-                            </p>
+                            {selectedPabellon.descripcion && (
+                              <p className="text-sm text-gray-600 mt-1">
+                                {selectedPabellon.descripcion}
+                              </p>
+                            )}
                           </div>
                         </div>
                         <button
@@ -359,30 +369,34 @@ const ModalFormularioArea: React.FC<Props> = ({ isOpen, onClose, areaId, areaNam
                     <button
                       type="button"
                       onClick={() => setIsUbicacionModalOpen(true)}
-                      className="w-full bg-blue-50 border-2 border-dashed border-blue-300 rounded-lg p-6 hover:bg-blue-100 transition-colors"
+                      className="w-full border-2 border-dashed border-blue-400 rounded-lg p-6 hover:bg-blue-50 transition-colors flex flex-col items-center justify-center space-y-2"
                     >
-                      <svg className="w-12 h-12 text-blue-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
+                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                        <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                      </div>
                       <p className="text-blue-600 font-medium">Seleccionar Pabellón y Salón</p>
-                      <p className="text-xs text-gray-600 mt-1">Haz clic para elegir la ubicación</p>
+                      <p className="text-sm text-gray-500">Haz clic para elegir la ubicación</p>
                     </button>
                   )}
                 </div>
 
-                <div className="flex space-x-3 pt-4">
+                {/* Botones */}
+                <div className="flex space-x-3 pt-4 border-t">
                   <button
                     type="button"
                     onClick={handleClose}
                     className="flex-1 bg-gray-200 text-gray-800 px-4 py-3 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                    disabled={submitting}
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
-                    disabled={submitting}
                     className="flex-1 bg-blue-600 text-white px-4 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50"
+                    disabled={submitting}
                   >
                     {submitting ? 'Enviando...' : 'Enviar Formulario'}
                   </button>
@@ -394,11 +408,13 @@ const ModalFormularioArea: React.FC<Props> = ({ isOpen, onClose, areaId, areaNam
       </div>
 
       {/* Modal de Selección de Ubicación */}
-      <ModalSeleccionarUbicacion
-        isOpen={isUbicacionModalOpen}
-        onClose={() => setIsUbicacionModalOpen(false)}
-        onSelect={handleUbicacionSelect}
-      />
+      {isUbicacionModalOpen && (
+        <ModalSeleccionarUbicacion
+          isOpen={isUbicacionModalOpen}
+          onClose={() => setIsUbicacionModalOpen(false)}
+          onSelect={handleUbicacionSelected}
+        />
+      )}
     </>
   );
 };
