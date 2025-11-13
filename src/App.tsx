@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import ModalLogin from './components/ModalLogin';
 import ModalVerificarAlumno from './components/modals/ModalVerificarAlumno';
 import ModalFormularioArea from './components/modals/ModalFormularioArea';
-import SedeHeader from './components/SedeHeader';
 import { useAuth } from './context/AuthContext';
 import { supabase } from './lib/supabase';
 import VistaBlack from './pages/VistaBlack';
@@ -23,7 +22,6 @@ interface DataAlumno {
   estudiante: string | null;
   carrera_profesional: string | null;
   facultad: string | null;
-  campus: string | null;
   modalidad: string | null;
   ciclo: number | null;
   grupo: string | null;
@@ -97,11 +95,20 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Header con selector de sede y fondo dinámico */}
-      <SedeHeader 
-        onLoginClick={() => setIsModalLoginOpen(true)}
-        showLoginButton={true}
-      />
+      {/* Header simple sin selector de sede */}
+      <header className="sticky top-0 z-10 shadow-md" style={{ backgroundColor: '#023052' }}>
+        <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+          <div className="flex items-center space-x-3">
+            <h1 className="text-xl font-bold text-white">Sistema UPEU</h1>
+          </div>
+          <button
+            onClick={() => setIsModalLoginOpen(true)}
+            className="bg-white bg-opacity-20 backdrop-blur-sm text-white px-6 py-2 rounded-lg hover:bg-opacity-30 transition-all font-medium border border-white border-opacity-30"
+          >
+            Acceso
+          </button>
+        </div>
+      </header>
 
       {/* Contenido principal */}
       <main className="max-w-7xl mx-auto px-4 py-8">
@@ -111,40 +118,25 @@ const App: React.FC = () => {
             Sistema de Gestión Universitaria
           </h1>
           <p className="text-gray-600 text-lg mb-2">
-            Selecciona tu sede y completa los formularios
+            Selecciona un área y completa los formularios
           </p>
           <p className="text-gray-500">
-            Explora nuestras áreas disponibles
+            Explora las diferentes áreas disponibles
           </p>
         </div>
 
-        {/* Loading */}
-        {loading && (
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <p className="text-gray-600 mt-4">Cargando áreas...</p>
+        {/* Grid de áreas */}
+        {loading ? (
+          <div className="flex justify-center items-center py-12">
+            <div className="text-gray-600">Cargando áreas...</div>
           </div>
-        )}
-
-        {/* Sin áreas */}
-        {!loading && areas.length === 0 && (
-          <div className="bg-white rounded-lg shadow-lg p-12 text-center">
-            <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-            </svg>
-            <h3 className="text-xl font-semibold text-gray-700 mb-2">No hay áreas disponibles</h3>
-            <p className="text-gray-500">Las áreas aparecerán aquí cuando se creen</p>
-          </div>
-        )}
-
-        {/* Grid de Áreas */}
-        {!loading && areas.length > 0 && (
+        ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {areas.map((area) => (
               <div
                 key={area.id}
                 onClick={() => handleAreaClick(area)}
-                className="bg-white rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all cursor-pointer transform hover:-translate-y-1"
+                className="bg-white rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all cursor-pointer"
               >
                 <div className="h-48 overflow-hidden bg-gray-200">
                   <img
