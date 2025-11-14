@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ModalLogin from './components/ModalLogin';
 import ModalVerificarAlumno from './components/modals/ModalVerificarAlumno';
 import ModalFormularioArea from './components/modals/ModalFormularioArea';
+import StudentReportsModal from './components/StudentReportsModal';
 import { useAuth } from './context/AuthContext';
 import { supabase } from './lib/supabase';
 import VistaBlack from './pages/VistaBlack';
@@ -36,6 +37,7 @@ const App: React.FC = () => {
   const [isModalLoginOpen, setIsModalLoginOpen] = useState(false);
   const [isModalVerificarOpen, setIsModalVerificarOpen] = useState(false);
   const [isModalFormularioOpen, setIsModalFormularioOpen] = useState(false);
+  const [isReportsModalOpen, setIsReportsModalOpen] = useState(false); // 🆕 Estado para el modal de reportes
   const [selectedArea, setSelectedArea] = useState<Area | null>(null);
   const [verifiedAlumno, setVerifiedAlumno] = useState<DataAlumno | null>(null);
   const { user } = useAuth();
@@ -95,18 +97,45 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Header simple sin selector de sede */}
+      {/* Header con botones Mis Reportes y Acceso */}
       <header className="sticky top-0 z-10 shadow-md" style={{ backgroundColor: '#023052' }}>
         <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
           <div className="flex items-center space-x-3">
             <h1 className="text-xl font-bold text-white">Sistema UPEU</h1>
           </div>
-          <button
-            onClick={() => setIsModalLoginOpen(true)}
-            className="bg-white bg-opacity-20 backdrop-blur-sm text-white px-6 py-2 rounded-lg hover:bg-opacity-30 transition-all font-medium border border-white border-opacity-30"
-          >
-            Acceso
-          </button>
+          
+          {/* 🆕 Contenedor de botones */}
+          <div className="flex items-center gap-3">
+            {/* 🆕 Botón Mis Reportes */}
+            <button
+              onClick={() => setIsReportsModalOpen(true)}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-all font-medium shadow-md hover:shadow-lg"
+              title="Consultar mis reportes"
+            >
+              <svg 
+                className="w-5 h-5" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2} 
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" 
+                />
+              </svg>
+              <span>Mis Reportes</span>
+            </button>
+
+            {/* Botón Acceso existente */}
+            <button
+              onClick={() => setIsModalLoginOpen(true)}
+              className="bg-white bg-opacity-20 backdrop-blur-sm text-white px-6 py-2 rounded-lg hover:bg-opacity-30 transition-all font-medium border border-white border-opacity-30"
+            >
+              Acceso
+            </button>
+          </div>
         </div>
       </header>
 
@@ -161,7 +190,7 @@ const App: React.FC = () => {
         )}
       </main>
 
-      {/* Modals */}
+      {/* Modals existentes */}
       <ModalLogin
         isOpen={isModalLoginOpen}
         onClose={() => setIsModalLoginOpen(false)}
@@ -188,6 +217,12 @@ const App: React.FC = () => {
           alumno={verifiedAlumno}
         />
       )}
+
+      {/* 🆕 Modal de Consulta de Reportes */}
+      <StudentReportsModal 
+        isOpen={isReportsModalOpen} 
+        onClose={() => setIsReportsModalOpen(false)} 
+      />
     </div>
   );
 };
