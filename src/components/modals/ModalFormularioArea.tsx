@@ -10,7 +10,6 @@ interface DataAlumno {
   estudiante: string | null;
   carrera_profesional: string | null;
   facultad: string | null;
-  campus: string | null;
   modalidad: string | null;
   ciclo: number | null;
   grupo: string | null;
@@ -244,7 +243,6 @@ const ModalFormularioArea: React.FC<Props> = ({ isOpen, onClose, areaId, areaNam
             label=""
             required={field.is_required}
             maxSizeMB={5}
-            allowCamera={true}
           />
         );
 

@@ -5,9 +5,9 @@ interface AdminOro {
   id: number;
   email: string;
   name: string | null;
-  dni: string | null; // ⬅️ AGREGADO
+  dni: string | null;
   area_id: number | null;
-  area_nombre?: string;
+  areas?: Area[]; // Múltiples áreas asignadas
   created_at: string;
 }
 
@@ -25,9 +25,9 @@ const GestionAdminOro: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    dni: '', // ⬅️ AGREGADO
+    dni: '',
     password: '',
-    area_id: ''
+    area_ids: [] as number[] // Array de IDs de áreas
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -51,22 +51,28 @@ const GestionAdminOro: React.FC = () => {
 
       if (error) throw error;
 
-      const adminsConArea = await Promise.all(
+      // Cargar las áreas asignadas a cada usuario desde user_areas
+      const adminsConAreas = await Promise.all(
         (data || []).map(async (admin) => {
-          if (admin.area_id) {
-            const { data: areaData } = await supabase
+          const { data: userAreasData } = await supabase
+            .from('user_areas')
+            .select('area_id')
+            .eq('user_id', admin.id);
+
+          if (userAreasData && userAreasData.length > 0) {
+            const areaIds = userAreasData.map(ua => ua.area_id);
+            const { data: areasData } = await supabase
               .from('areas')
-              .select('name')
-              .eq('id', admin.area_id)
-              .single();
-            
-            return { ...admin, area_nombre: areaData?.name || 'Sin área' };
+              .select('id, name')
+              .in('id', areaIds);
+
+            return { ...admin, areas: areasData || [] };
           }
-          return { ...admin, area_nombre: 'Sin área asignada' };
+          return { ...admin, areas: [] };
         })
       );
 
-      setAdmins(adminsConArea);
+      setAdmins(adminsConAreas);
     } catch (error) {
       console.error('Error al cargar administradores:', error);
     }
@@ -92,18 +98,18 @@ const GestionAdminOro: React.FC = () => {
       setFormData({
         name: admin.name || '',
         email: admin.email,
-        dni: admin.dni || '', // ⬅️ AGREGADO
+        dni: admin.dni || '',
         password: '',
-        area_id: admin.area_id?.toString() || ''
+        area_ids: admin.areas?.map(a => a.id) || []
       });
     } else {
       setEditingAdmin(null);
       setFormData({
         name: '',
         email: '',
-        dni: '', // ⬅️ AGREGADO
+        dni: '',
         password: '',
-        area_id: ''
+        area_ids: []
       });
     }
     setIsModalOpen(true);
@@ -114,7 +120,7 @@ const GestionAdminOro: React.FC = () => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingAdmin(null);
-    setFormData({ name: '', email: '', dni: '', password: '', area_id: '' });
+    setFormData({ name: '', email: '', dni: '', password: '', area_ids: [] });
     setError('');
   };
 
@@ -122,6 +128,18 @@ const GestionAdminOro: React.FC = () => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
+    });
+  };
+
+  const handleAreaToggle = (areaId: number) => {
+    setFormData(prev => {
+      const isSelected = prev.area_ids.includes(areaId);
+      return {
+        ...prev,
+        area_ids: isSelected
+          ? prev.area_ids.filter(id => id !== areaId)
+          : [...prev.area_ids, areaId]
+      };
     });
   };
 
@@ -150,8 +168,8 @@ const GestionAdminOro: React.FC = () => {
       return;
     }
 
-    if (!formData.area_id) {
-      setError('Debes asignar un área');
+    if (formData.area_ids.length === 0) {
+      setError('Debes asignar al menos un área');
       return;
     }
 
@@ -159,10 +177,11 @@ const GestionAdminOro: React.FC = () => {
       const adminData: any = {
         name: formData.name.trim(),
         email: formData.email.trim(),
-        dni: formData.dni.trim(), // ⬅️ AGREGADO
-        area_id: parseInt(formData.area_id),
+        dni: formData.dni.trim(),
         role: 'admin_oro'
       };
+
+      let userId: number;
 
       if (editingAdmin) {
         if (formData.password.trim()) {
@@ -175,17 +194,40 @@ const GestionAdminOro: React.FC = () => {
           .eq('id', editingAdmin.id);
 
         if (error) throw error;
+        userId = editingAdmin.id;
+
+        // Eliminar áreas anteriores
+        await supabase
+          .from('user_areas')
+          .delete()
+          .eq('user_id', userId);
+
         setSuccess('Administrador actualizado correctamente');
       } else {
         adminData.password = formData.password.trim();
 
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('admin_user')
-          .insert([adminData]);
+          .insert([adminData])
+          .select()
+          .single();
 
         if (error) throw error;
+        userId = data.id;
         setSuccess('Administrador creado correctamente');
       }
+
+      // Insertar las nuevas áreas asignadas
+      const userAreasData = formData.area_ids.map(areaId => ({
+        user_id: userId,
+        area_id: areaId
+      }));
+
+      const { error: areasError } = await supabase
+        .from('user_areas')
+        .insert(userAreasData);
+
+      if (areasError) throw areasError;
 
       await loadAdmins();
       setTimeout(() => {
@@ -304,17 +346,29 @@ const GestionAdminOro: React.FC = () => {
 
               {/* Información */}
               <div className="space-y-2 mb-4">
-                {/* DNI - AGREGADO */}
                 <div className="bg-gray-700 rounded-lg px-3 py-2">
                   <p className="text-xs text-gray-400">DNI</p>
                   <p className="text-sm text-white font-medium">{admin.dni || 'No especificado'}</p>
                 </div>
-                
+
                 <div className="bg-gray-700 rounded-lg px-3 py-2">
-                  <p className="text-xs text-gray-400">Área Asignada</p>
-                  <p className="text-sm text-white font-medium">{admin.area_nombre}</p>
+                  <p className="text-xs text-gray-400">Áreas Asignadas ({admin.areas?.length || 0})</p>
+                  <div className="mt-1 space-y-1">
+                    {admin.areas && admin.areas.length > 0 ? (
+                      admin.areas.map((area) => (
+                        <span
+                          key={area.id}
+                          className="inline-block bg-yellow-600 bg-opacity-20 text-yellow-400 text-xs px-2 py-1 rounded mr-1 mb-1"
+                        >
+                          {area.name}
+                        </span>
+                      ))
+                    ) : (
+                      <p className="text-sm text-gray-400">Sin áreas asignadas</p>
+                    )}
+                  </div>
                 </div>
-                
+
                 <div className="bg-gray-700 rounded-lg px-3 py-2">
                   <p className="text-xs text-gray-400">Fecha de Creación</p>
                   <p className="text-sm text-white">{formatDate(admin.created_at)}</p>
@@ -443,24 +497,32 @@ const GestionAdminOro: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Área Asignada *
+                    Áreas Asignadas * (Selecciona al menos una)
                   </label>
-                  <select
-                    name="area_id"
-                    value={formData.area_id}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-600 focus:border-transparent text-white"
-                    required
-                  >
-                    <option value="">Selecciona un área</option>
-                    {areas.map((area) => (
-                      <option key={area.id} value={area.id}>
-                        {area.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="bg-gray-700 border border-gray-600 rounded-lg p-3 max-h-48 overflow-y-auto">
+                    {areas.length === 0 ? (
+                      <p className="text-gray-400 text-sm">No hay áreas disponibles</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {areas.map((area) => (
+                          <label
+                            key={area.id}
+                            className="flex items-center space-x-3 cursor-pointer hover:bg-gray-600 p-2 rounded transition-colors"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={formData.area_ids.includes(area.id)}
+                              onChange={() => handleAreaToggle(area.id)}
+                              className="w-4 h-4 text-yellow-600 bg-gray-600 border-gray-500 rounded focus:ring-yellow-600 focus:ring-2"
+                            />
+                            <span className="text-white text-sm">{area.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <p className="text-xs text-gray-400 mt-1">
-                    Este administrador solo tendrá acceso al área seleccionada
+                    Este administrador tendrá acceso a las áreas seleccionadas ({formData.area_ids.length})
                   </p>
                 </div>
 

@@ -149,25 +149,53 @@ const GestionAreas: React.FC = () => {
   };
 
   const handleDelete = async (area: Area) => {
-    if (!window.confirm(`¿Estás seguro de eliminar el área "${area.name}"?`)) {
-      return;
-    }
-
     try {
+      // Primero verificar si hay usuarios asignados a esta área
+      const { data: users, error: checkError } = await supabase
+        .from('admin_user')
+        .select('id')
+        .eq('area_id', area.id);
+
+      if (checkError) throw checkError;
+
+      if (users && users.length > 0) {
+        setError(
+          `No se puede eliminar el área "${area.name}" porque tiene ${users.length} usuario(s) asignado(s). ` +
+          `Por favor, reasigna o elimina los usuarios primero.`
+        );
+        setTimeout(() => setError(''), 5000);
+        return;
+      }
+
+      // Si no hay usuarios, confirmar eliminación
+      if (!window.confirm(`¿Estás seguro de eliminar el área "${area.name}"?`)) {
+        return;
+      }
+
       const { error } = await supabase
         .from('areas')
         .delete()
         .eq('id', area.id);
 
       if (error) throw error;
-      
+
       setSuccess('Área eliminada correctamente');
       await loadAreas();
       setTimeout(() => setSuccess(''), 3000);
     } catch (error: any) {
       console.error('Error:', error);
-      setError(error.message || 'Error al eliminar el área');
-      setTimeout(() => setError(''), 3000);
+
+      // Manejo específico de error de clave foránea
+      if (error.code === '23503') {
+        setError(
+          `No se puede eliminar el área "${area.name}" porque tiene usuarios asignados. ` +
+          `Elimina o reasigna los usuarios primero.`
+        );
+      } else {
+        setError(error.message || 'Error al eliminar el área');
+      }
+
+      setTimeout(() => setError(''), 5000);
     }
   };
 

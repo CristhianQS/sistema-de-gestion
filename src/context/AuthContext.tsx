@@ -48,7 +48,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setUser(data as AdminUser);
       localStorage.setItem('admin_user', JSON.stringify(data));
-      return { success: true, message: 'Login exitoso' };
+      return { success: true, message: 'Inicio de sesión exitoso' };
     } catch (error) {
       console.error('Error:', error);
       return { success: false, message: 'Error al conectar con el servidor' };

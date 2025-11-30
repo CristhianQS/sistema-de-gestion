@@ -8,7 +8,6 @@ interface DataAlumno {
   estudiante: string | null;
   carrera_profesional: string | null;
   facultad: string | null;
-  campus: string | null;
   modalidad: string | null;
   ciclo: number | null;
   grupo: string | null;

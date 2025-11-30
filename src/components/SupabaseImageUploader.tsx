@@ -83,7 +83,7 @@ const SupabaseImageUploader: React.FC<Props> = ({
         <div className="mb-4 relative">
           <img
             src={previewUrl}
-            alt="Preview"
+            alt="Vista previa"
             className="w-full h-48 object-cover rounded-lg border-2 border-gray-600"
             onError={(e) => {
               e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Error+al+cargar';

@@ -60,7 +60,7 @@ const ModalLogin: React.FC<ModalLoginProps> = ({ isOpen, onClose }) => {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Email
+              Correo Electrónico
             </label>
             <input
               type="email"
