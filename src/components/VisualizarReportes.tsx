@@ -13,6 +13,7 @@ interface Reporte {
   submitted_at: string;
   status: 'pending' | 'in_progress' | 'resolved';
   area_nombre?: string;
+  estimated_time?: string;
 }
 
 interface Area {
@@ -69,11 +70,23 @@ const VisualizarReportes: React.FC = () => {
     }
   };
 
-  const handleUpdateStatus = async (reporteId: number, newStatus: string) => {
+  const handleUpdateStatus = async (reporteId: number, newStatus: string, estimatedTime?: string) => {
     try {
+      const updateData: any = { status: newStatus };
+
+      // Si cambia a "in_progress" y hay tiempo estimado, agregarlo
+      if (newStatus === 'in_progress' && estimatedTime) {
+        updateData.estimated_time = estimatedTime;
+      }
+
+      // Si cambia a otro estado desde "in_progress", limpiar el tiempo estimado
+      if (newStatus !== 'in_progress') {
+        updateData.estimated_time = null;
+      }
+
       const { error } = await supabase
         .from('area_submissions')
-        .update({ status: newStatus })
+        .update(updateData)
         .eq('id', reporteId);
 
       if (error) throw error;
@@ -299,7 +312,7 @@ const VisualizarReportes: React.FC = () => {
         </div>
       </div>
 
-      {/* Lista de Reportes */}
+      {/* Lista de Reportes en modo tabla */}
       {filteredReportes.length === 0 ? (
         <div className="bg-gray-800 rounded-xl p-12 text-center border border-gray-700">
           <svg className="w-20 h-20 text-gray-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -315,90 +328,95 @@ const VisualizarReportes: React.FC = () => {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filteredReportes.map((reporte) => {
-            const statusInfo = getStatusInfo(reporte.status);
-            return (
-              <div
-                key={reporte.id}
-                onClick={() => handleOpenModal(reporte)}
-                className="bg-gray-800 rounded-xl border border-gray-700 hover:border-blue-500 hover:shadow-xl transition-all cursor-pointer overflow-hidden group"
-              >
-                {/* Barra de progreso superior */}
-                <div className="h-1.5 bg-gray-700">
-                  <div
-                    className={`h-full ${statusInfo.color} transition-all duration-500`}
-                    style={{ width: `${statusInfo.progress}%` }}
-                  />
-                </div>
-
-                <div className="p-5">
-                  {/* Header: Badge de estado */}
-                  <div className="flex items-center justify-between mb-4">
-                    <span className={`px-3 py-1.5 rounded-full text-xs font-bold ${statusInfo.color} text-white`}>
-                      {statusInfo.label}
-                    </span>
-                    <svg className="w-5 h-5 text-gray-600 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                    </svg>
-                  </div>
-
-                  {/* Información del estudiante */}
-                  <div className="mb-4">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <div className="w-10 h-10 bg-blue-600 bg-opacity-20 rounded-full flex items-center justify-center flex-shrink-0">
-                        <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-white font-semibold text-sm truncate">{reporte.alumno_nombre}</p>
-                        <p className="text-gray-400 text-xs">
-                          {reporte.alumno_codigo} · {reporte.alumno_dni}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Área */}
-                  <div className="mb-3">
-                    <div className="flex items-center space-x-2">
-                      <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                      </svg>
-                      <span className="text-blue-400 text-sm font-medium">{reporte.area_nombre}</span>
-                    </div>
-                  </div>
-
-                  {/* Ubicación */}
-                  <div className="mb-4">
-                    <div className="flex items-center space-x-2">
-                      <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      <span className="text-gray-300 text-sm truncate">
-                        {reporte.form_data?.pabellon_nombre && reporte.form_data?.salon_nombre
-                          ? `${reporte.form_data.pabellon_nombre} - ${reporte.form_data.salon_nombre}`
-                          : 'Ubicación no especificada'
-                        }
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Footer: Fecha */}
-                  <div className="pt-3 border-t border-gray-700">
-                    <div className="flex items-center space-x-2 text-xs text-gray-500">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <span>{formatDate(reporte.submitted_at)}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+        <div className="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-900 border-b border-gray-700">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Estudiante</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Área</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Ubicación</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Fecha</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Estado</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-700">
+                {filteredReportes.map((reporte) => {
+                  const statusInfo = getStatusInfo(reporte.status);
+                  return (
+                    <tr
+                      key={reporte.id}
+                      className="hover:bg-gray-750 transition-colors"
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-8 h-8 bg-blue-600 bg-opacity-20 rounded-full flex items-center justify-center flex-shrink-0">
+                            <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                          </div>
+                          <div>
+                            <p className="text-white font-medium text-sm">{reporte.alumno_nombre}</p>
+                            <p className="text-gray-400 text-xs">{reporte.alumno_codigo} · {reporte.alumno_dni}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-blue-400 text-sm font-medium">{reporte.area_nombre}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center space-x-2">
+                          <svg className="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          <span className="text-gray-300 text-sm">
+                            {reporte.form_data?.pabellon_nombre && reporte.form_data?.salon_nombre
+                              ? `${reporte.form_data.pabellon_nombre} - ${reporte.form_data.salon_nombre}`
+                              : 'No especificada'
+                            }
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="text-gray-300 text-sm">
+                          {new Date(reporte.submitted_at).toLocaleDateString('es-ES', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric'
+                          })}
+                        </div>
+                        <div className="text-gray-500 text-xs">
+                          {new Date(reporte.submitted_at).toLocaleTimeString('es-ES', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${statusInfo.color} text-white inline-block`}>
+                          {statusInfo.label}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() => handleOpenModal(reporte)}
+                          className="text-blue-400 hover:text-blue-300 text-sm font-medium flex items-center gap-1 transition-colors"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                          Ver detalles
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

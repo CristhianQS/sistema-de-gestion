@@ -161,163 +161,172 @@ const StudentReportsModal = ({ isOpen, onClose }: StudentReportsModalProps) => {
               </div>
             )}
 
-            {/* Lista de reportes mejorada */}
+            {/* Lista de reportes en modo lista */}
             {reports.length > 0 && (
-              <div className="space-y-5">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-2xl font-bold text-gray-800">
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-gray-800">
                     Historial de Reportes
                   </h3>
-                  <span className="px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
+                  <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
                     {reports.length} {reports.length === 1 ? 'reporte' : 'reportes'}
                   </span>
                 </div>
 
-                {reports.map((report) => (
-                  <div
-                    key={report.id}
-                    className="bg-white border-2 border-gray-200 rounded-2xl overflow-hidden hover:border-blue-400 hover:shadow-lg transition-all duration-300"
-                  >
-                    {/* Cabecera del reporte */}
-                    <div className="p-6">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center flex-shrink-0">
-                              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                              </svg>
-                            </div>
-                            <div>
-                              <h4 className="text-xl font-bold text-gray-900">
-                                {report.area_name}
-                              </h4>
-                              <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                {formatDate(report.submitted_at)}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                        <span
-                          className={`${getStatusColor(report.status)} text-white text-sm font-bold px-4 py-2 rounded-full shadow-md`}
-                        >
-                          {getStatusLabel(report.status)}
-                        </span>
-                      </div>
-
-                      {report.area_description && (
-                        <p className="text-sm text-gray-600 mb-4 bg-gray-50 p-4 rounded-xl border border-gray-200">
-                          {report.area_description}
-                        </p>
-                      )}
-
-                      {/* Botón para expandir detalles mejorado */}
-                      <button
-                        onClick={() => toggleExpandReport(report.id)}
-                        className="flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm font-semibold transition-all hover:gap-3 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-xl"
-                      >
-                        <span>
-                          {expandedReport === report.id ? 'Ocultar detalles' : 'Ver detalles completos'}
-                        </span>
-                        <svg
-                          className={`w-5 h-5 transition-transform duration-300 ${expandedReport === report.id ? 'rotate-180' : ''}`}
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </button>
-                    </div>
-
-                    {/* Detalles expandibles mejorados */}
-                    {expandedReport === report.id && (
-                      <div className="bg-gradient-to-br from-gray-50 to-blue-50 border-t-2 border-gray-200 p-6">
-                        {/* Mostrar ubicación de forma especial */}
-                        {(report.form_data.pabellon_nombre || report.form_data.salon_nombre) && (
-                          <div className="mb-6 bg-white p-5 rounded-xl border-2 border-blue-300 shadow-sm">
-                            <div className="flex items-center gap-3 mb-4">
-                              <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center">
-                                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                </svg>
+                <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Área</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Ubicación</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Fecha</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Estado</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {reports.map((report) => (
+                        <>
+                          <tr key={report.id} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-4 py-3">
+                              <div className="font-medium text-gray-900">{report.area_name}</div>
+                              {report.area_description && (
+                                <div className="text-xs text-gray-500 mt-1">{report.area_description}</div>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="text-sm text-gray-700">
+                                {report.form_data.pabellon_nombre && (
+                                  <div>{report.form_data.pabellon_nombre}</div>
+                                )}
+                                {report.form_data.salon_nombre && (
+                                  <div className="text-xs text-gray-500">{report.form_data.salon_nombre}</div>
+                                )}
                               </div>
-                              <h6 className="text-lg font-bold text-gray-800">Ubicación del Reporte</h6>
-                            </div>
-                            <div className="space-y-2 ml-13">
-                              {report.form_data.pabellon_nombre && (
-                                <div className="flex items-baseline gap-2">
-                                  <span className="text-sm font-bold text-gray-600">Pabellón:</span>
-                                  <span className="text-base font-semibold text-gray-900">{report.form_data.pabellon_nombre}</span>
-                                </div>
-                              )}
-                              {report.form_data.salon_nombre && (
-                                <div className="flex items-baseline gap-2">
-                                  <span className="text-sm font-bold text-gray-600">Salón:</span>
-                                  <span className="text-base font-semibold text-gray-900">{report.form_data.salon_nombre}</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-
-                        <h5 className="text-base font-bold text-gray-800 mb-4 flex items-center gap-2">
-                          <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
-                          Datos del Formulario
-                        </h5>
-                        <div className="space-y-3">
-                          {Object.entries(report.form_data)
-                            .filter(([key]) => {
-                              // Filtrar campos que no se deben mostrar
-                              const hiddenFields = [
-                                'salon_id',
-                                'pabellon_id',
-                                'salon_nombre',
-                                'pabellon_nombre',
-                                'salon_capacidad',
-                                'pabellon_descripcion'
-                              ];
-                              return !hiddenFields.includes(key.toLowerCase());
-                            })
-                            .map(([key, value]) => {
-                              const isUrl = typeof value === 'string' && value.startsWith('http');
-
-                              return (
-                                <div key={key} className="bg-white p-4 rounded-xl border border-gray-200 hover:border-blue-300 transition-colors">
-                                  <span className="text-sm font-bold text-gray-700 block mb-2">
-                                    {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                  </span>
-                                  {isUrl ? (
-                                    <a
-                                      href={value}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium bg-blue-50 hover:bg-blue-100 px-3 py-2 rounded-lg transition-all"
-                                    >
-                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                                      </svg>
-                                      Ver archivo adjunto
-                                    </a>
-                                  ) : (
-                                    <span className="text-sm text-gray-800 break-words block">
-                                      {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="text-sm text-gray-700">
+                                {new Date(report.submitted_at).toLocaleDateString('es-PE', {
+                                  day: '2-digit',
+                                  month: '2-digit',
+                                  year: 'numeric'
+                                })}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {new Date(report.submitted_at).toLocaleTimeString('es-PE', {
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="space-y-1">
+                                <span className={`${getStatusColor(report.status)} text-white text-xs font-semibold px-2 py-1 rounded`}>
+                                  {getStatusLabel(report.status)}
+                                </span>
+                                {report.status === 'in_progress' && report.estimated_time && (
+                                  <div className="flex items-center gap-1 text-xs text-green-600">
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span className="font-medium">
+                                      {(() => {
+                                        const timeOptions = [
+                                          { value: '30min', label: '30 minutos' },
+                                          { value: '1h', label: '1 hora' },
+                                          { value: '2h', label: '2 horas' },
+                                          { value: '4h', label: '4 horas' },
+                                          { value: '1d', label: '1 día' },
+                                          { value: '2d', label: '2 días' },
+                                          { value: '3d', label: '3 días' },
+                                          { value: '1w', label: '1 semana' },
+                                          { value: '2w', label: '2 semanas' }
+                                        ];
+                                        return timeOptions.find(opt => opt.value === report.estimated_time)?.label || report.estimated_time;
+                                      })()}
                                     </span>
-                                  )}
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <button
+                                onClick={() => toggleExpandReport(report.id)}
+                                className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1"
+                              >
+                                {expandedReport === report.id ? (
+                                  <>
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                                    </svg>
+                                    <span>Ocultar</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                    <span>Ver más</span>
+                                  </>
+                                )}
+                              </button>
+                            </td>
+                          </tr>
+                          {expandedReport === report.id && (
+                            <tr>
+                              <td colSpan={5} className="px-4 py-4 bg-gray-50">
+                                <div className="space-y-3">
+                                  <h6 className="text-sm font-semibold text-gray-700 mb-2">Detalles del reporte:</h6>
+                                  <div className="grid grid-cols-2 gap-3">
+                                    {Object.entries(report.form_data)
+                                      .filter(([key]) => {
+                                        const hiddenFields = [
+                                          'salon_id',
+                                          'pabellon_id',
+                                          'salon_nombre',
+                                          'pabellon_nombre',
+                                          'salon_capacidad',
+                                          'pabellon_descripcion'
+                                        ];
+                                        return !hiddenFields.includes(key.toLowerCase());
+                                      })
+                                      .map(([key, value]) => {
+                                        const isUrl = typeof value === 'string' && value.startsWith('http');
+                                        return (
+                                          <div key={key} className="bg-white p-3 rounded border border-gray-200">
+                                            <div className="text-xs font-semibold text-gray-600 mb-1">
+                                              {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                            </div>
+                                            {isUrl ? (
+                                              <a
+                                                href={value}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1"
+                                              >
+                                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                                </svg>
+                                                Ver archivo
+                                              </a>
+                                            ) : (
+                                              <div className="text-sm text-gray-800">
+                                                {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                                              </div>
+                                            )}
+                                          </div>
+                                        );
+                                      })}
+                                  </div>
                                 </div>
-                              );
-                            })}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                              </td>
+                            </tr>
+                          )}
+                        </>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
 

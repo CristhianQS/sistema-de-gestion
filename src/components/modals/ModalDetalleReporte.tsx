@@ -11,17 +11,20 @@ interface Reporte {
   submitted_at: string;
   status: 'pending' | 'in_progress' | 'resolved';
   area_nombre?: string;
+  estimated_time?: string;
 }
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   reporte: Reporte;
-  onUpdateStatus: (reporteId: number, newStatus: string) => Promise<void>;
+  onUpdateStatus: (reporteId: number, newStatus: string, estimatedTime?: string) => Promise<void>;
 }
 
 const ModalDetalleReporte: React.FC<Props> = ({ isOpen, onClose, reporte, onUpdateStatus }) => {
   const [updating, setUpdating] = useState(false);
+  const [showTimeSelector, setShowTimeSelector] = useState(false);
+  const [selectedTime, setSelectedTime] = useState('');
 
   if (!isOpen) return null;
 
@@ -69,10 +72,41 @@ const ModalDetalleReporte: React.FC<Props> = ({ isOpen, onClose, reporte, onUpda
   const statusInfo = getStatusInfo(reporte.status);
 
   const handleChangeStatus = async (newStatus: string) => {
+    // Si cambia a "in_progress", mostrar selector de tiempo
+    if (newStatus === 'in_progress') {
+      setShowTimeSelector(true);
+      return;
+    }
+
     setUpdating(true);
     await onUpdateStatus(reporte.id, newStatus);
     setUpdating(false);
   };
+
+  const handleConfirmInProgress = async () => {
+    if (!selectedTime) {
+      alert('Por favor selecciona un tiempo estimado');
+      return;
+    }
+
+    setUpdating(true);
+    await onUpdateStatus(reporte.id, 'in_progress', selectedTime);
+    setShowTimeSelector(false);
+    setSelectedTime('');
+    setUpdating(false);
+  };
+
+  const timeOptions = [
+    { value: '30min', label: '30 minutos' },
+    { value: '1h', label: '1 hora' },
+    { value: '2h', label: '2 horas' },
+    { value: '4h', label: '4 horas' },
+    { value: '1d', label: '1 día' },
+    { value: '2d', label: '2 días' },
+    { value: '3d', label: '3 días' },
+    { value: '1w', label: '1 semana' },
+    { value: '2w', label: '2 semanas' }
+  ];
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -173,6 +207,23 @@ const ModalDetalleReporte: React.FC<Props> = ({ isOpen, onClose, reporte, onUpda
             </div>
           </div>
 
+          {/* Tiempo Estimado */}
+          {reporte.status === 'in_progress' && reporte.estimated_time && (
+            <div className="bg-green-50 rounded-lg p-4 mb-6 border-2 border-green-200">
+              <h4 className="font-bold text-gray-800 mb-3 flex items-center">
+                <svg className="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Tiempo Estimado de Solución
+              </h4>
+              <div className="bg-white rounded-lg p-3 inline-block">
+                <p className="text-lg font-bold text-green-700">
+                  {timeOptions.find(opt => opt.value === reporte.estimated_time)?.label || reporte.estimated_time}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Datos del Formulario */}
           <div className="space-y-4 mb-6">
             <h4 className="font-bold text-gray-800 flex items-center">
@@ -215,10 +266,57 @@ const ModalDetalleReporte: React.FC<Props> = ({ isOpen, onClose, reporte, onUpda
           {/* Cambiar Estado */}
           <div className="bg-gray-50 rounded-lg p-4">
             <h4 className="font-bold text-gray-800 mb-3">Cambiar Estado</h4>
+
+            {/* Selector de tiempo estimado */}
+            {showTimeSelector && (
+              <div className="mb-4 bg-white border-2 border-blue-300 rounded-lg p-4 animate-fadeIn">
+                <h5 className="font-semibold text-gray-800 mb-3 flex items-center">
+                  <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Selecciona el tiempo estimado de solución
+                </h5>
+                <div className="grid grid-cols-3 gap-2 mb-4">
+                  {timeOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => setSelectedTime(option.value)}
+                      className={`px-3 py-2 rounded-lg font-medium text-sm transition-all ${
+                        selectedTime === option.value
+                          ? 'bg-blue-500 text-white ring-2 ring-blue-400'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleConfirmInProgress}
+                    disabled={!selectedTime || updating}
+                    className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
+                  >
+                    Confirmar
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowTimeSelector(false);
+                      setSelectedTime('');
+                    }}
+                    disabled={updating}
+                    className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 disabled:opacity-50 font-medium transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="flex flex-wrap gap-3">
               <button
                 onClick={() => handleChangeStatus('pending')}
-                disabled={updating || reporte.status === 'pending'}
+                disabled={updating || reporte.status === 'pending' || showTimeSelector}
                 className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all ${
                   reporte.status === 'pending'
                     ? 'bg-yellow-500 text-white'
@@ -229,7 +327,7 @@ const ModalDetalleReporte: React.FC<Props> = ({ isOpen, onClose, reporte, onUpda
               </button>
               <button
                 onClick={() => handleChangeStatus('in_progress')}
-                disabled={updating || reporte.status === 'in_progress'}
+                disabled={updating || reporte.status === 'in_progress' || showTimeSelector}
                 className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all ${
                   reporte.status === 'in_progress'
                     ? 'bg-blue-500 text-white'
@@ -240,7 +338,7 @@ const ModalDetalleReporte: React.FC<Props> = ({ isOpen, onClose, reporte, onUpda
               </button>
               <button
                 onClick={() => handleChangeStatus('resolved')}
-                disabled={updating || reporte.status === 'resolved'}
+                disabled={updating || reporte.status === 'resolved' || showTimeSelector}
                 className={`flex-1 px-4 py-3 rounded-lg font-medium transition-all ${
                   reporte.status === 'resolved'
                     ? 'bg-green-500 text-white'

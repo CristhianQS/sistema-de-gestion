@@ -12,6 +12,7 @@ interface StudentReport {
   status: string;
   area_name?: string;
   area_description?: string;
+  estimated_time?: string;
 }
 
 export const useStudentReports = () => {

@@ -24,6 +24,33 @@ const PublicView: React.FC = () => {
     loadAreas();
   }, []);
 
+  // Cargar chat de n8n
+  useEffect(() => {
+    // Agregar CSS del chat
+    const link = document.createElement('link');
+    link.href = 'https://cdn.jsdelivr.net/npm/@n8n/chat/dist/style.css';
+    link.rel = 'stylesheet';
+    document.head.appendChild(link);
+
+    // Agregar script del chat
+    const script = document.createElement('script');
+    script.type = 'module';
+    script.textContent = `
+      import { createChat } from 'https://cdn.jsdelivr.net/npm/@n8n/chat/dist/chat.bundle.es.js';
+
+      createChat({
+        webhookUrl: 'https://cristhianqs24.app.n8n.cloud/webhook/e5f08322-e670-444f-b070-4ad1bba2245b/chat'
+      });
+    `;
+    document.body.appendChild(script);
+
+    // Cleanup al desmontar
+    return () => {
+      document.head.removeChild(link);
+      document.body.removeChild(script);
+    };
+  }, []);
+
   // Redirigir si hay un usuario autenticado
   useEffect(() => {
     if (user) {

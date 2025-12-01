@@ -53,6 +53,15 @@ interface Props {
   alumno: DataAlumno;
 }
 
+interface SelectionOption {
+  id: number;
+  area_id: number;
+  group_name: string;
+  option_value: string;
+  option_label: string;
+  order_index: number;
+}
+
 const ModalFormularioArea: React.FC<Props> = ({ isOpen, onClose, areaId, areaName, alumno }) => {
   const [fields, setFields] = useState<AreaField[]>([]);
   const [formData, setFormData] = useState<Record<string, any>>({});
@@ -63,10 +72,12 @@ const ModalFormularioArea: React.FC<Props> = ({ isOpen, onClose, areaId, areaNam
   const [isUbicacionModalOpen, setIsUbicacionModalOpen] = useState(false);
   const [selectedPabellon, setSelectedPabellon] = useState<Pabellon | null>(null);
   const [selectedSalon, setSelectedSalon] = useState<Salon | null>(null);
+  const [selectionOptions, setSelectionOptions] = useState<SelectionOption[]>([]);
 
   useEffect(() => {
     if (isOpen) {
       loadFields();
+      loadSelectionOptions();
     }
   }, [isOpen, areaId]);
 
@@ -86,6 +97,21 @@ const ModalFormularioArea: React.FC<Props> = ({ isOpen, onClose, areaId, areaNam
       setError('Error al cargar el formulario');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadSelectionOptions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('selection_options')
+        .select('*')
+        .eq('area_id', areaId)
+        .order('order_index', { ascending: true });
+
+      if (error) throw error;
+      setSelectionOptions(data || []);
+    } catch (error) {
+      console.error('Error al cargar opciones de selección:', error);
     }
   };
 
@@ -213,22 +239,45 @@ const ModalFormularioArea: React.FC<Props> = ({ isOpen, onClose, areaId, areaNam
         );
 
       case 'select':
-        const options = field.options ? 
-          field.options.split('\n').filter(o => o.trim()) : [];
+        // Filtrar opciones del grupo especificado en el campo
+        const fieldGroupOptions = selectionOptions.filter(
+          opt => opt.group_name === (field.options || 'default')
+        );
+        const isOtrosSelected = formData[field.field_name] === 'otros';
+
         return (
-          <select
-            value={formData[field.field_name] || ''}
-            onChange={(e) => handleInputChange(field.field_name, e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            required={field.is_required}
-          >
-            <option value="">Selecciona una opción</option>
-            {options.map((option, index) => (
-              <option key={index} value={option.trim()}>
-                {option.trim()}
-              </option>
-            ))}
-          </select>
+          <div className="space-y-3">
+            <select
+              value={formData[field.field_name] || ''}
+              onChange={(e) => handleInputChange(field.field_name, e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              required={field.is_required}
+            >
+              <option value="">Selecciona una opción</option>
+              {fieldGroupOptions.map((option) => (
+                <option key={option.id} value={option.option_value}>
+                  {option.option_label}
+                </option>
+              ))}
+            </select>
+
+            {/* Mostrar campo de texto adicional cuando se selecciona "Otros" */}
+            {isOtrosSelected && (
+              <div className="mt-3 animate-fadeIn">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Especifica (Otros)
+                </label>
+                <textarea
+                  value={formData[`${field.field_name}_otros_text`] || ''}
+                  onChange={(e) => handleInputChange(`${field.field_name}_otros_text`, e.target.value)}
+                  rows={3}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  placeholder="Describe tu respuesta aquí..."
+                  required={isOtrosSelected}
+                />
+              </div>
+            )}
+          </div>
         );
 
       case 'image':
