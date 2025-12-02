@@ -7,6 +7,7 @@ const PublicView = lazy(() => import('../pages/PublicView'));
 const VistaBlack = lazy(() => import('../pages/VistaBlack'));
 const VistaOro = lazy(() => import('../pages/VistaOro'));
 const VistaPlata = lazy(() => import('../pages/VistaPlata'));
+const ConfiguracionChatbot = lazy(() => import('../components/ConfiguracionChatbot'));
 
 /**
  * Componente de carga mientras se cargan las vistas
@@ -65,6 +66,15 @@ const AppRoutes: React.FC = () => {
           element={
             <ProtectedRoute allowedRoles={['admin_plata']}>
               <VistaPlata />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/chatbot-config"
+          element={
+            <ProtectedRoute allowedRoles={['admin_black']}>
+              <ConfiguracionChatbot />
             </ProtectedRoute>
           }
         />

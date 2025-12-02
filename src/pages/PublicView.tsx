@@ -4,6 +4,7 @@ import ModalLogin from '../components/ModalLogin';
 import ModalVerificarAlumno from '../components/modals/ModalVerificarAlumno';
 import ModalFormularioArea from '../components/modals/ModalFormularioArea';
 import StudentReportsModal from '../components/StudentReportsModal';
+import ChatbotAsistente from '../components/ChatbotAsistente';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import type { Area, DataAlumno } from '../lib/supabase';
@@ -22,33 +23,6 @@ const PublicView: React.FC = () => {
 
   useEffect(() => {
     loadAreas();
-  }, []);
-
-  // Cargar chat de n8n
-  useEffect(() => {
-    // Agregar CSS del chat
-    const link = document.createElement('link');
-    link.href = 'https://cdn.jsdelivr.net/npm/@n8n/chat/dist/style.css';
-    link.rel = 'stylesheet';
-    document.head.appendChild(link);
-
-    // Agregar script del chat
-    const script = document.createElement('script');
-    script.type = 'module';
-    script.textContent = `
-      import { createChat } from 'https://cdn.jsdelivr.net/npm/@n8n/chat/dist/chat.bundle.es.js';
-
-      createChat({
-        webhookUrl: 'https://cristhianqs24.app.n8n.cloud/webhook/e5f08322-e670-444f-b070-4ad1bba2245b/chat'
-      });
-    `;
-    document.body.appendChild(script);
-
-    // Cleanup al desmontar
-    return () => {
-      document.head.removeChild(link);
-      document.body.removeChild(script);
-    };
   }, []);
 
   // Redirigir si hay un usuario autenticado
@@ -228,6 +202,9 @@ const PublicView: React.FC = () => {
         isOpen={isReportsModalOpen}
         onClose={() => setIsReportsModalOpen(false)}
       />
+
+      {/* Chatbot Asistente */}
+      <ChatbotAsistente />
     </div>
   );
 };

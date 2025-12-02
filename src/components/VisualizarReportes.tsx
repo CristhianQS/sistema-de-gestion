@@ -356,8 +356,15 @@ const VisualizarReportes: React.FC = () => {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                             </svg>
                           </div>
-                          <div>
-                            <p className="text-white font-medium text-sm">{reporte.alumno_nombre}</p>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <p className="text-white font-medium text-sm">{reporte.alumno_nombre}</p>
+                              {reporte.form_data?.ia_metadata?.ia_enabled && (
+                                <span className="px-2 py-0.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full text-xs font-bold flex items-center gap-1" title="Creado con IA">
+                                  🤖 IA
+                                </span>
+                              )}
+                            </div>
                             <p className="text-gray-400 text-xs">{reporte.alumno_codigo} · {reporte.alumno_dni}</p>
                           </div>
                         </div>
