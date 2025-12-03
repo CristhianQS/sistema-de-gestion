@@ -260,7 +260,7 @@ const GestionDatosAlumnos: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="text-gray-400">Cargando datos de alumnos...</div>
+        <div className="text-gray-700">Cargando datos de alumnos...</div>
       </div>
     );
   }
@@ -270,8 +270,8 @@ const GestionDatosAlumnos: React.FC = () => {
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>
-          <h2 className="text-2xl font-bold text-white">Datos de Alumnos</h2>
-          <p className="text-gray-400 mt-1">
+          <h2 className="text-3xl font-bold text-gray-800">Datos de Alumnos</h2>
+          <p className="text-gray-600 mt-2">
             Total: {alumnos.length} | Filtrados: {filteredAlumnos.length} | Mostrando: {startIndex + 1}-{Math.min(endIndex, filteredAlumnos.length)} | Página {currentPage} de {totalPages}
           </p>
         </div>
@@ -307,22 +307,22 @@ const GestionDatosAlumnos: React.FC = () => {
 
       {/* Mensajes de éxito/error */}
       {uploadError && (
-        <div className="bg-red-500 bg-opacity-20 border border-red-500 text-red-200 px-4 py-3 rounded-lg">
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
           {uploadError}
         </div>
       )}
       {uploadSuccess && (
-        <div className="bg-green-500 bg-opacity-20 border border-green-500 text-green-200 px-4 py-3 rounded-lg">
+        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
           {uploadSuccess}
         </div>
       )}
 
       {/* Filtros y Búsqueda */}
-      <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+      <div className="bg-white rounded-lg p-6 border border-gray-200">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Búsqueda */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Buscar
             </label>
             <input
@@ -330,19 +330,19 @@ const GestionDatosAlumnos: React.FC = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Nombre, DNI, Código, Email..."
-              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
           {/* Filtro Facultad */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Facultad
             </label>
             <select
               value={filterFacultad}
               onChange={(e) => setFilterFacultad(e.target.value)}
-              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-white focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">Todas las Facultades</option>
               {getFacultades().map((facultad) => (
@@ -355,13 +355,13 @@ const GestionDatosAlumnos: React.FC = () => {
 
           {/* Filtro Carrera */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Carrera Profesional
             </label>
             <select
               value={filterCarrera}
               onChange={(e) => setFilterCarrera(e.target.value)}
-              className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg text-white focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">Todas las Carreras</option>
               {getCarreras().map((carrera) => (
@@ -382,86 +382,86 @@ const GestionDatosAlumnos: React.FC = () => {
                 setFilterFacultad('all');
                 setFilterCarrera('all');
               }}
-              className="bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors text-sm"
+              className="bg-gray-50 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors text-sm"
             >
               Limpiar Filtros
             </button>
           )}
           <div className="flex items-center gap-2 ml-auto">
-            <label className="text-sm text-gray-300">Mostrar:</label>
+            <label className="text-sm text-gray-700">Mostrar:</label>
             <select
               value={itemsPerPage}
               onChange={(e) => setItemsPerPage(Number(e.target.value))}
-              className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:ring-2 focus:ring-blue-500"
+              className="px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 text-sm focus:ring-2 focus:ring-blue-500"
             >
               <option value={50}>50</option>
               <option value={100}>100</option>
               <option value={1000}>1000</option>
             </select>
-            <label className="text-sm text-gray-300">por página</label>
+            <label className="text-sm text-gray-700">por página</label>
           </div>
         </div>
       </div>
 
       {/* Tabla de Alumnos */}
       {filteredAlumnos.length === 0 ? (
-        <div className="bg-gray-800 rounded-lg p-12 text-center border border-gray-700">
+        <div className="bg-white rounded-lg p-12 text-center border border-gray-200">
           <svg className="w-16 h-16 text-gray-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
           </svg>
-          <h3 className="text-xl font-semibold text-gray-400 mb-2">No se encontraron alumnos</h3>
+          <h3 className="text-xl font-semibold text-gray-600 mb-2">No se encontraron alumnos</h3>
           <p className="text-gray-500">Intenta ajustar los filtros de búsqueda</p>
         </div>
       ) : (
-        <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-900">
+              <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     #
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                     Código
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                     Estudiante
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                     DNI
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                     Carrera
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                     Ciclo
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                     Acciones
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-700">
                 {paginatedAlumnos.map((alumno, index) => (
-                  <tr key={alumno.id} className="hover:bg-gray-700 transition-colors">
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-400 font-medium">
+                  <tr key={alumno.id} className="hover:bg-blue-50 transition-colors">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
                       {startIndex + index + 1}
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-white font-medium">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">
                       {alumno.codigo || 'N/A'}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-white">{alumno.estudiante || 'Sin nombre'}</div>
-                      <div className="text-xs text-gray-400">{alumno.correo || 'Sin correo'}</div>
+                      <div className="text-sm font-medium text-gray-800">{alumno.estudiante || 'Sin nombre'}</div>
+                      <div className="text-xs text-gray-600">{alumno.correo || 'Sin correo'}</div>
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-300">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-700">
                       {alumno.dni || 'N/A'}
                     </td>
-                    <td className="px-4 py-4 text-sm text-gray-300">
+                    <td className="px-4 py-4 text-sm text-gray-700">
                       <div className="max-w-xs truncate">{alumno.carrera_profesional || 'N/A'}</div>
                       <div className="text-xs text-gray-500">{alumno.facultad || ''}</div>
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-300">
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-700">
                       {alumno.ciclo || 'N/A'}
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm">
@@ -480,29 +480,29 @@ const GestionDatosAlumnos: React.FC = () => {
 
           {/* Controles de Paginación */}
           {filteredAlumnos.length > 0 && (
-            <div className="bg-gray-900 px-4 py-3 flex items-center justify-between border-t border-gray-700">
+            <div className="bg-gray-50 px-4 py-3 flex items-center justify-between border-t border-gray-200">
               <div className="flex-1 flex justify-between sm:hidden">
                 <button
                   onClick={() => goToPage(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className="relative inline-flex items-center px-4 py-2 border border-gray-600 text-sm font-medium rounded-md text-gray-300 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Anterior
                 </button>
                 <button
                   onClick={() => goToPage(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-600 text-sm font-medium rounded-md text-gray-300 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Siguiente
                 </button>
               </div>
               <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-sm text-gray-400">
-                    Mostrando <span className="font-medium text-white">{startIndex + 1}</span> a{' '}
-                    <span className="font-medium text-white">{Math.min(endIndex, filteredAlumnos.length)}</span> de{' '}
-                    <span className="font-medium text-white">{filteredAlumnos.length}</span> resultados
+                  <p className="text-sm text-gray-700">
+                    Mostrando <span className="font-medium text-blue-600">{startIndex + 1}</span> a{' '}
+                    <span className="font-medium text-blue-600">{Math.min(endIndex, filteredAlumnos.length)}</span> de{' '}
+                    <span className="font-medium text-blue-600">{filteredAlumnos.length}</span> resultados
                   </p>
                 </div>
                 <div>
@@ -510,7 +510,7 @@ const GestionDatosAlumnos: React.FC = () => {
                     <button
                       onClick={() => goToPage(1)}
                       disabled={currentPage === 1}
-                      className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-600 bg-gray-800 text-sm font-medium text-gray-400 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <span className="sr-only">Primera</span>
                       <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
@@ -520,7 +520,7 @@ const GestionDatosAlumnos: React.FC = () => {
                     <button
                       onClick={() => goToPage(currentPage - 1)}
                       disabled={currentPage === 1}
-                      className="relative inline-flex items-center px-2 py-2 border border-gray-600 bg-gray-800 text-sm font-medium text-gray-400 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <span className="sr-only">Anterior</span>
                       <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
@@ -547,7 +547,7 @@ const GestionDatosAlumnos: React.FC = () => {
                           className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
                             currentPage === pageNumber
                               ? 'z-10 bg-blue-600 border-blue-600 text-white'
-                              : 'bg-gray-800 border-gray-600 text-gray-400 hover:bg-gray-700'
+                              : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
                           }`}
                         >
                           {pageNumber}
@@ -558,7 +558,7 @@ const GestionDatosAlumnos: React.FC = () => {
                     <button
                       onClick={() => goToPage(currentPage + 1)}
                       disabled={currentPage === totalPages}
-                      className="relative inline-flex items-center px-2 py-2 border border-gray-600 bg-gray-800 text-sm font-medium text-gray-400 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="relative inline-flex items-center px-2 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <span className="sr-only">Siguiente</span>
                       <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
@@ -568,7 +568,7 @@ const GestionDatosAlumnos: React.FC = () => {
                     <button
                       onClick={() => goToPage(totalPages)}
                       disabled={currentPage === totalPages}
-                      className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-600 bg-gray-800 text-sm font-medium text-gray-400 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <span className="sr-only">Última</span>
                       <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
@@ -586,18 +586,18 @@ const GestionDatosAlumnos: React.FC = () => {
 
       {/* Modal de Detalles */}
       {selectedAlumno && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl border border-gray-700 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl border border-gray-200 max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               {/* Header */}
               <div className="flex justify-between items-start mb-6">
                 <div>
-                  <h3 className="text-2xl font-bold text-white">{selectedAlumno.estudiante || 'Sin nombre'}</h3>
-                  <p className="text-gray-400">Código: {selectedAlumno.codigo}</p>
+                  <h3 className="text-2xl font-bold text-gray-800">{selectedAlumno.estudiante || 'Sin nombre'}</h3>
+                  <p className="text-gray-600">Código: {selectedAlumno.codigo}</p>
                 </div>
                 <button
                   onClick={() => setSelectedAlumno(null)}
-                  className="text-gray-400 hover:text-white"
+                  className="text-gray-600 hover:text-gray-800"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -607,59 +607,59 @@ const GestionDatosAlumnos: React.FC = () => {
 
               {/* Información Personal */}
               <div className="space-y-4">
-                <div className="bg-gray-700 rounded-lg p-4">
-                  <h4 className="text-lg font-bold text-white mb-3">Información Personal</h4>
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <h4 className="text-lg font-bold text-gray-800 mb-3">Información Personal</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
-                      <p className="text-xs text-gray-400">DNI</p>
-                      <p className="text-sm text-white">{selectedAlumno.dni || 'No especificado'}</p>
+                      <p className="text-xs text-gray-600">DNI</p>
+                      <p className="text-sm text-gray-800">{selectedAlumno.dni || 'No especificado'}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-400">Fecha de Nacimiento</p>
-                      <p className="text-sm text-white">{formatDate(selectedAlumno.fecha_nacimiento)}</p>
+                      <p className="text-xs text-gray-600">Fecha de Nacimiento</p>
+                      <p className="text-sm text-gray-800">{formatDate(selectedAlumno.fecha_nacimiento)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-400">Celular</p>
-                      <p className="text-sm text-white">{selectedAlumno.celular || 'No especificado'}</p>
+                      <p className="text-xs text-gray-600">Celular</p>
+                      <p className="text-sm text-gray-800">{selectedAlumno.celular || 'No especificado'}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-400">Correo Electrónico</p>
-                      <p className="text-sm text-white">{selectedAlumno.correo || 'No especificado'}</p>
+                      <p className="text-xs text-gray-600">Correo Electrónico</p>
+                      <p className="text-sm text-gray-800">{selectedAlumno.correo || 'No especificado'}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-400">Religión</p>
-                      <p className="text-sm text-white">{selectedAlumno.religion || 'No especificado'}</p>
+                      <p className="text-xs text-gray-600">Religión</p>
+                      <p className="text-sm text-gray-800">{selectedAlumno.religion || 'No especificado'}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-400">País</p>
-                      <p className="text-sm text-white">{selectedAlumno.pais || 'No especificado'}</p>
+                      <p className="text-xs text-gray-600">País</p>
+                      <p className="text-sm text-gray-800">{selectedAlumno.pais || 'No especificado'}</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Información Académica */}
-                <div className="bg-gray-700 rounded-lg p-4">
-                  <h4 className="text-lg font-bold text-white mb-3">Información Académica</h4>
+                <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                  <h4 className="text-lg font-bold text-gray-800 mb-3">Información Académica</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>
-                      <p className="text-xs text-gray-400">Facultad</p>
-                      <p className="text-sm text-white">{selectedAlumno.facultad || 'No especificado'}</p>
+                      <p className="text-xs text-gray-600">Facultad</p>
+                      <p className="text-sm text-gray-800">{selectedAlumno.facultad || 'No especificado'}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-400">Carrera Profesional</p>
-                      <p className="text-sm text-white">{selectedAlumno.carrera_profesional || 'No especificado'}</p>
+                      <p className="text-xs text-gray-600">Carrera Profesional</p>
+                      <p className="text-sm text-gray-800">{selectedAlumno.carrera_profesional || 'No especificado'}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-400">Modalidad</p>
-                      <p className="text-sm text-white">{selectedAlumno.modalidad || 'No especificado'}</p>
+                      <p className="text-xs text-gray-600">Modalidad</p>
+                      <p className="text-sm text-gray-800">{selectedAlumno.modalidad || 'No especificado'}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-400">Ciclo</p>
-                      <p className="text-sm text-white">{selectedAlumno.ciclo || 'No especificado'}</p>
+                      <p className="text-xs text-gray-600">Ciclo</p>
+                      <p className="text-sm text-gray-800">{selectedAlumno.ciclo || 'No especificado'}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-400">Grupo</p>
-                      <p className="text-sm text-white">{selectedAlumno.grupo || 'No especificado'}</p>
+                      <p className="text-xs text-gray-600">Grupo</p>
+                      <p className="text-sm text-gray-800">{selectedAlumno.grupo || 'No especificado'}</p>
                     </div>
                   </div>
                 </div>
@@ -669,7 +669,7 @@ const GestionDatosAlumnos: React.FC = () => {
               <div className="mt-6">
                 <button
                   onClick={() => setSelectedAlumno(null)}
-                  className="w-full bg-gray-700 text-white px-4 py-3 rounded-lg hover:bg-gray-600 transition-colors font-medium"
+                  className="w-full bg-gray-50 text-white px-4 py-3 rounded-lg hover:bg-gray-600 transition-colors font-medium"
                 >
                   Cerrar
                 </button>

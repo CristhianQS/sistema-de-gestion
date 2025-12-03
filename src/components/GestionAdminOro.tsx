@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { UserPlus, Edit2, Trash2, X, Save, Shield, Mail, User, MapPin, Key } from 'lucide-react';
 
 interface AdminOro {
   id: number;
@@ -7,7 +8,7 @@ interface AdminOro {
   name: string | null;
   dni: string | null;
   area_id: number | null;
-  areas?: Area[]; // Múltiples áreas asignadas
+  areas?: Area[];
   created_at: string;
 }
 
@@ -16,36 +17,39 @@ interface Area {
   name: string;
 }
 
+type ModalMode = 'create' | 'edit' | 'resetPassword' | null;
+
 const GestionAdminOro: React.FC = () => {
   const [admins, setAdmins] = useState<AdminOro[]>([]);
   const [areas, setAreas] = useState<Area[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [editingAdmin, setEditingAdmin] = useState<AdminOro | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     dni: '',
     password: '',
-    area_ids: [] as number[] // Array de IDs de áreas
+    area_ids: [] as number[]
   });
+  const [newPassword, setNewPassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-
-  // Estados para resetear contraseña
-  const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
-  const [resetPasswordAdmin, setResetPasswordAdmin] = useState<AdminOro | null>(null);
-  const [newPassword, setNewPassword] = useState('');
-  const [resetError, setResetError] = useState('');
-  const [resetSuccess, setResetSuccess] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = async () => {
-    await Promise.all([loadAdmins(), loadAreas()]);
-    setLoading(false);
+    setLoading(true);
+    try {
+      await Promise.all([loadAdmins(), loadAreas()]);
+    } catch (err) {
+      console.error('Error al cargar datos:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const loadAdmins = async () => {
@@ -58,7 +62,6 @@ const GestionAdminOro: React.FC = () => {
 
       if (error) throw error;
 
-      // Cargar las áreas asignadas a cada usuario desde user_areas
       const adminsConAreas = await Promise.all(
         (data || []).map(async (admin) => {
           const { data: userAreasData } = await supabase
@@ -82,6 +85,7 @@ const GestionAdminOro: React.FC = () => {
       setAdmins(adminsConAreas);
     } catch (error) {
       console.error('Error al cargar administradores:', error);
+      setError('Error al cargar administradores');
     }
   };
 
@@ -99,43 +103,49 @@ const GestionAdminOro: React.FC = () => {
     }
   };
 
-  const handleOpenModal = (admin?: AdminOro) => {
-    if (admin) {
-      setEditingAdmin(admin);
-      setFormData({
-        name: admin.name || '',
-        email: admin.email,
-        dni: admin.dni || '',
-        password: '',
-        area_ids: admin.areas?.map(a => a.id) || []
-      });
-    } else {
-      setEditingAdmin(null);
-      setFormData({
-        name: '',
-        email: '',
-        dni: '',
-        password: '',
-        area_ids: []
-      });
-    }
-    setIsModalOpen(true);
+  const handleOpenCreateModal = () => {
+    setModalMode('create');
+    setEditingAdmin(null);
+    setFormData({
+      name: '',
+      email: '',
+      dni: '',
+      password: '',
+      area_ids: []
+    });
+    setError('');
+    setSuccess('');
+  };
+
+  const handleOpenEditModal = (admin: AdminOro) => {
+    setModalMode('edit');
+    setEditingAdmin(admin);
+    setFormData({
+      name: admin.name || '',
+      email: admin.email,
+      dni: admin.dni || '',
+      password: '',
+      area_ids: admin.areas?.map(a => a.id) || []
+    });
+    setError('');
+    setSuccess('');
+  };
+
+  const handleOpenResetPasswordModal = (admin: AdminOro) => {
+    setModalMode('resetPassword');
+    setEditingAdmin(admin);
+    setNewPassword(admin.dni || '');
     setError('');
     setSuccess('');
   };
 
   const handleCloseModal = () => {
-    setIsModalOpen(false);
+    setModalMode(null);
     setEditingAdmin(null);
     setFormData({ name: '', email: '', dni: '', password: '', area_ids: [] });
+    setNewPassword('');
     setError('');
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    setSuccess('');
   };
 
   const handleAreaToggle = (areaId: number) => {
@@ -155,23 +165,29 @@ const GestionAdminOro: React.FC = () => {
     setError('');
     setSuccess('');
 
+    // Validaciones
     if (!formData.name.trim()) {
-      setError('El nombre es requerido');
+      setError('El nombre es obligatorio');
       return;
     }
 
-    if (!formData.email.trim()) {
-      setError('El email es requerido');
+    if (!formData.email.trim() || !formData.email.includes('@')) {
+      setError('El email es obligatorio y debe ser válido');
       return;
     }
 
     if (!formData.dni.trim()) {
-      setError('El DNI es requerido');
+      setError('El DNI es obligatorio');
       return;
     }
 
-    if (!editingAdmin && !formData.password.trim()) {
-      setError('La contraseña es requerida');
+    if (modalMode === 'create' && !formData.password.trim()) {
+      setError('La contraseña es obligatoria');
+      return;
+    }
+
+    if (formData.password && formData.password.length < 6) {
+      setError('La contraseña debe tener al menos 6 caracteres');
       return;
     }
 
@@ -179,6 +195,8 @@ const GestionAdminOro: React.FC = () => {
       setError('Debes asignar al menos un área');
       return;
     }
+
+    setSaving(true);
 
     try {
       const adminData: any = {
@@ -190,7 +208,7 @@ const GestionAdminOro: React.FC = () => {
 
       let userId: number;
 
-      if (editingAdmin) {
+      if (modalMode === 'edit' && editingAdmin) {
         if (formData.password.trim()) {
           adminData.password = formData.password.trim();
         }
@@ -203,13 +221,12 @@ const GestionAdminOro: React.FC = () => {
         if (error) throw error;
         userId = editingAdmin.id;
 
-        // Eliminar áreas anteriores
         await supabase
           .from('user_areas')
           .delete()
           .eq('user_id', userId);
 
-        setSuccess('Administrador actualizado correctamente');
+        setSuccess('✅ Administrador actualizado correctamente');
       } else {
         adminData.password = formData.password.trim();
 
@@ -221,10 +238,9 @@ const GestionAdminOro: React.FC = () => {
 
         if (error) throw error;
         userId = data.id;
-        setSuccess('Administrador creado correctamente');
+        setSuccess('✅ Administrador creado correctamente');
       }
 
-      // Insertar las nuevas áreas asignadas
       const userAreasData = formData.area_ids.map(areaId => ({
         user_id: userId,
         area_id: areaId
@@ -237,18 +253,60 @@ const GestionAdminOro: React.FC = () => {
       if (areasError) throw areasError;
 
       await loadAdmins();
+
       setTimeout(() => {
         handleCloseModal();
-        setSuccess('');
-      }, 1500);
+      }, 1000);
     } catch (error: any) {
       console.error('Error:', error);
-      setError(error.message || 'Error al guardar el administrador');
+      setError('Error al guardar: ' + (error.message || 'Error desconocido'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    if (!newPassword.trim()) {
+      setError('La contraseña es obligatoria');
+      return;
+    }
+
+    if (newPassword.trim().length < 6) {
+      setError('La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+
+    if (!editingAdmin) return;
+
+    setSaving(true);
+
+    try {
+      const { error } = await supabase
+        .from('admin_user')
+        .update({ password: newPassword.trim() })
+        .eq('id', editingAdmin.id);
+
+      if (error) throw error;
+
+      setSuccess('✅ Contraseña actualizada correctamente');
+
+      setTimeout(() => {
+        handleCloseModal();
+      }, 1000);
+    } catch (error: any) {
+      console.error('Error:', error);
+      setError('Error al actualizar contraseña: ' + (error.message || 'Error desconocido'));
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async (admin: AdminOro) => {
-    if (!window.confirm(`¿Eliminar al administrador "${admin.name || admin.email}"?`)) {
+    if (!window.confirm(`¿Estás seguro de eliminar a ${admin.name}?\n\nEsta acción no se puede deshacer.`)) {
       return;
     }
 
@@ -260,64 +318,15 @@ const GestionAdminOro: React.FC = () => {
 
       if (error) throw error;
 
-      setSuccess('Administrador eliminado correctamente');
+      setSuccess('✅ Administrador eliminado correctamente');
       await loadAdmins();
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (error: any) {
-      console.error('Error:', error);
-      setError(error.message || 'Error al eliminar el administrador');
-      setTimeout(() => setError(''), 3000);
-    }
-  };
 
-  const handleOpenResetPassword = (admin: AdminOro) => {
-    setResetPasswordAdmin(admin);
-    setNewPassword(admin.dni || ''); // Establecer DNI como contraseña por defecto
-    setResetError('');
-    setResetSuccess('');
-    setIsResetPasswordModalOpen(true);
-  };
-
-  const handleCloseResetPassword = () => {
-    setIsResetPasswordModalOpen(false);
-    setResetPasswordAdmin(null);
-    setNewPassword('');
-    setResetError('');
-    setResetSuccess('');
-  };
-
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setResetError('');
-    setResetSuccess('');
-
-    if (!newPassword.trim()) {
-      setResetError('La contraseña es requerida');
-      return;
-    }
-
-    if (newPassword.trim().length < 6) {
-      setResetError('La contraseña debe tener al menos 6 caracteres');
-      return;
-    }
-
-    if (!resetPasswordAdmin) return;
-
-    try {
-      const { error } = await supabase
-        .from('admin_user')
-        .update({ password: newPassword.trim() })
-        .eq('id', resetPasswordAdmin.id);
-
-      if (error) throw error;
-
-      setResetSuccess('Contraseña actualizada correctamente');
       setTimeout(() => {
-        handleCloseResetPassword();
-      }, 1500);
+        setSuccess('');
+      }, 3000);
     } catch (error: any) {
       console.error('Error:', error);
-      setResetError(error.message || 'Error al actualizar la contraseña');
+      setError('Error al eliminar: ' + (error.message || 'Error desconocido'));
     }
   };
 
@@ -332,367 +341,406 @@ const GestionAdminOro: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-gray-400">Cargando administradores...</div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold text-white">Gestión de Administradores Oro</h2>
-          <p className="text-gray-400 mt-1">
-            Administradores con acceso a áreas específicas ({admins.length})
-          </p>
-        </div>
-        <button
-          onClick={() => handleOpenModal()}
-          className="bg-yellow-600 text-white px-6 py-2 rounded-lg hover:bg-yellow-700 transition-colors font-medium flex items-center space-x-2"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          <span>Nuevo Admin Oro</span>
-        </button>
-      </div>
-
-      {/* Mensajes */}
-      {error && (
-        <div className="bg-red-500 bg-opacity-20 border border-red-500 text-red-200 px-4 py-3 rounded-lg">
-          {error}
-        </div>
-      )}
-      {success && (
-        <div className="bg-green-500 bg-opacity-20 border border-green-500 text-green-200 px-4 py-3 rounded-lg">
-          {success}
-        </div>
-      )}
-
-      {/* Lista de Administradores */}
-      {admins.length === 0 ? (
-        <div className="bg-gray-800 rounded-lg p-12 text-center border border-gray-700">
-          <svg className="w-16 h-16 text-gray-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-          </svg>
-          <h3 className="text-xl font-semibold text-gray-400 mb-2">No hay administradores Oro</h3>
-          <p className="text-gray-500">Crea el primer administrador para comenzar</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {admins.map((admin) => (
-            <div
-              key={admin.id}
-              className="bg-gray-800 rounded-lg p-5 border border-gray-700 hover:border-yellow-600 transition-all"
-            >
-              {/* Header del card */}
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-yellow-600 bg-opacity-20 rounded-full flex items-center justify-center">
-                    <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-bold text-white text-lg">{admin.name || 'Sin nombre'}</h3>
-                    <p className="text-xs text-gray-400">{admin.email}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Información */}
-              <div className="space-y-2 mb-4">
-                <div className="bg-gray-700 rounded-lg px-3 py-2">
-                  <p className="text-xs text-gray-400">DNI</p>
-                  <p className="text-sm text-white font-medium">{admin.dni || 'No especificado'}</p>
-                </div>
-
-                <div className="bg-gray-700 rounded-lg px-3 py-2">
-                  <p className="text-xs text-gray-400">Áreas Asignadas ({admin.areas?.length || 0})</p>
-                  <div className="mt-1 space-y-1">
-                    {admin.areas && admin.areas.length > 0 ? (
-                      admin.areas.map((area) => (
-                        <span
-                          key={area.id}
-                          className="inline-block bg-yellow-600 bg-opacity-20 text-yellow-400 text-xs px-2 py-1 rounded mr-1 mb-1"
-                        >
-                          {area.name}
-                        </span>
-                      ))
-                    ) : (
-                      <p className="text-sm text-gray-400">Sin áreas asignadas</p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="bg-gray-700 rounded-lg px-3 py-2">
-                  <p className="text-xs text-gray-400">Fecha de Creación</p>
-                  <p className="text-sm text-white">{formatDate(admin.created_at)}</p>
-                </div>
-              </div>
-
-              {/* Acciones */}
-              <div className="space-y-2">
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => handleOpenModal(admin)}
-                    className="flex-1 bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center justify-center space-x-1"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                    <span>Editar</span>
-                  </button>
-                  <button
-                    onClick={() => handleDelete(admin)}
-                    className="flex-1 bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium flex items-center justify-center space-x-1"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                    <span>Eliminar</span>
-                  </button>
-                </div>
-                <button
-                  onClick={() => handleOpenResetPassword(admin)}
-                  className="w-full bg-purple-600 text-white px-3 py-2 rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium flex items-center justify-center space-x-1"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                  </svg>
-                  <span>Resetear Contraseña</span>
-                </button>
-              </div>
+    <div className="min-h-screen bg-gray-50 py-8 px-4">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
+                <Shield className="w-8 h-8 text-yellow-600" />
+                Gestión de Admin Oro
+              </h1>
+              <p className="text-gray-600 mt-2">
+                Administradores con acceso a áreas específicas
+              </p>
             </div>
-          ))}
+            <button
+              onClick={handleOpenCreateModal}
+              className="flex items-center gap-2 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white px-6 py-3 rounded-xl hover:from-yellow-600 hover:to-yellow-700 transition-all shadow-lg shadow-yellow-600/30"
+            >
+              <UserPlus className="w-5 h-5" />
+              Crear Admin Oro
+            </button>
+          </div>
         </div>
-      )}
 
-      {/* Modal de Crear/Editar */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-gray-700">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-2xl font-bold text-white">
-                  {editingAdmin ? 'Editar Admin Oro' : 'Nuevo Admin Oro'}
+        {/* Mensajes */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+            {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4">
+            {success}
+          </div>
+        )}
+
+        {/* Lista de Admin Oro */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="px-6 py-4 bg-gradient-to-r from-yellow-50 to-yellow-100 border-b border-yellow-200">
+            <h2 className="text-xl font-semibold text-gray-800">
+              Admin Oro Registrados ({admins.length})
+            </h2>
+          </div>
+
+          {admins.length === 0 ? (
+            <div className="p-12 text-center">
+              <Shield className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500 text-lg mb-2">No hay Admin Oro registrados</p>
+              <p className="text-gray-400 text-sm">Crea el primer Admin Oro para empezar</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Usuario
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      DNI
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Áreas Asignadas
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Fecha de Creación
+                    </th>
+                    <th className="px-6 py-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      Acciones
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-100">
+                  {admins.map((admin) => (
+                    <tr key={admin.id} className="hover:bg-yellow-50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center text-white font-semibold">
+                            {admin.name?.charAt(0).toUpperCase() || 'A'}
+                          </div>
+                          <div>
+                            <div className="font-medium text-gray-900">{admin.name || 'Sin nombre'}</div>
+                            <div className="text-sm text-gray-500 flex items-center gap-1">
+                              <Mail className="w-3 h-3" />
+                              {admin.email}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-gray-700 font-medium">
+                        {admin.dni || <span className="text-gray-400">-</span>}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-wrap gap-1">
+                          {admin.areas && admin.areas.length > 0 ? (
+                            admin.areas.map((area) => (
+                              <span
+                                key={area.id}
+                                className="inline-flex items-center bg-yellow-100 text-yellow-700 text-xs px-3 py-1 rounded-full font-medium border border-yellow-200"
+                              >
+                                <MapPin className="w-3 h-3 mr-1" />
+                                {area.name}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-gray-400 italic text-sm">Sin áreas</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-gray-600 text-sm">
+                        {formatDate(admin.created_at)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => handleOpenEditModal(admin)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Editar"
+                          >
+                            <Edit2 className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => handleOpenResetPasswordModal(admin)}
+                            className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                            title="Resetear Contraseña"
+                          >
+                            <Key className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(admin)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Eliminar"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Modal de Crear/Editar */}
+        {(modalMode === 'create' || modalMode === 'edit') && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+              <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white px-6 py-4 flex items-center justify-between rounded-t-xl">
+                <h3 className="text-xl font-semibold flex items-center gap-2">
+                  {modalMode === 'create' ? (
+                    <>
+                      <UserPlus className="w-6 h-6" />
+                      Crear Admin Oro
+                    </>
+                  ) : (
+                    <>
+                      <Edit2 className="w-6 h-6" />
+                      Editar Admin Oro
+                    </>
+                  )}
                 </h3>
                 <button
                   onClick={handleCloseModal}
-                  className="text-gray-400 hover:text-white"
+                  className="p-1 hover:bg-yellow-600 rounded-lg transition-colors"
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  <X className="w-6 h-6" />
                 </button>
               </div>
 
-              {error && (
-                <div className="mb-4 bg-red-500 bg-opacity-20 border border-red-500 text-red-200 px-4 py-3 rounded-lg text-sm">
-                  {error}
-                </div>
-              )}
-
-              {success && (
-                <div className="mb-4 bg-green-500 bg-opacity-20 border border-green-500 text-green-200 px-4 py-3 rounded-lg text-sm">
-                  {success}
-                </div>
-              )}
-
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                {/* Nombre */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                    <User className="w-4 h-4 text-gray-500" />
                     Nombre Completo *
                   </label>
                   <input
                     type="text"
-                    name="name"
                     value={formData.name}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-600 focus:border-transparent text-white"
-                    placeholder="Juan Pérez"
-                    required
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                    placeholder="Ej: Juan Pérez"
+                    disabled={saving}
                   />
                 </div>
 
-                {/* CAMPO DNI - AGREGADO */}
+                {/* Email */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    DNI *
-                  </label>
-                  <input
-                    type="text"
-                    name="dni"
-                    value={formData.dni}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-600 focus:border-transparent text-white"
-                    placeholder="12345678"
-                    required
-                    maxLength={8}
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                    <Mail className="w-4 h-4 text-gray-500" />
                     Email *
                   </label>
                   <input
                     type="email"
-                    name="email"
                     value={formData.email}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-600 focus:border-transparent text-white"
-                    placeholder="admin@example.com"
-                    required
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                    placeholder="email@ejemplo.com"
+                    disabled={saving}
                   />
                 </div>
 
+                {/* DNI */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Contraseña {editingAdmin ? '(dejar en blanco para no cambiar)' : '*'}
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    DNI *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.dni}
+                    onChange={(e) => setFormData({ ...formData, dni: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                    placeholder="12345678"
+                    disabled={saving}
+                  />
+                </div>
+
+                {/* Contraseña */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Contraseña {modalMode === 'edit' && '(dejar vacío para mantener la actual)'}
+                    {modalMode === 'create' && ' *'}
                   </label>
                   <input
                     type="password"
-                    name="password"
                     value={formData.password}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-600 focus:border-transparent text-white"
-                    placeholder="••••••••"
-                    required={!editingAdmin}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                    placeholder={modalMode === 'edit' ? 'Nueva contraseña (opcional)' : 'Mínimo 6 caracteres'}
+                    disabled={saving}
                   />
                 </div>
 
+                {/* Áreas */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Áreas Asignadas * (Selecciona al menos una)
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-gray-500" />
+                    Áreas Asignadas * (puede seleccionar múltiples)
                   </label>
-                  <div className="bg-gray-700 border border-gray-600 rounded-lg p-3 max-h-48 overflow-y-auto">
-                    {areas.length === 0 ? (
-                      <p className="text-gray-400 text-sm">No hay áreas disponibles</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {areas.map((area) => (
-                          <label
-                            key={area.id}
-                            className="flex items-center space-x-3 cursor-pointer hover:bg-gray-600 p-2 rounded transition-colors"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={formData.area_ids.includes(area.id)}
-                              onChange={() => handleAreaToggle(area.id)}
-                              className="w-4 h-4 text-yellow-600 bg-gray-600 border-gray-500 rounded focus:ring-yellow-600 focus:ring-2"
-                            />
-                            <span className="text-white text-sm">{area.name}</span>
-                          </label>
-                        ))}
-                      </div>
-                    )}
+                  <div className="border border-gray-300 rounded-lg p-3 max-h-48 overflow-y-auto space-y-2">
+                    {areas.map((area) => (
+                      <label
+                        key={area.id}
+                        className="flex items-center gap-2 p-2 hover:bg-yellow-50 rounded cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={formData.area_ids.includes(area.id)}
+                          onChange={() => handleAreaToggle(area.id)}
+                          disabled={saving}
+                          className="w-4 h-4 text-yellow-600 border-gray-300 rounded focus:ring-yellow-500"
+                        />
+                        <span className="text-gray-700">{area.name}</span>
+                      </label>
+                    ))}
                   </div>
-                  <p className="text-xs text-gray-400 mt-1">
-                    Este administrador tendrá acceso a las áreas seleccionadas ({formData.area_ids.length})
+                  <p className="text-xs text-gray-500 mt-1">
+                    Seleccionadas: {formData.area_ids.length}
                   </p>
                 </div>
 
-                <div className="flex space-x-3 pt-4">
+                {error && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                    {error}
+                  </div>
+                )}
+
+                {success && (
+                  <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
+                    {success}
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-4">
                   <button
                     type="button"
                     onClick={handleCloseModal}
-                    className="flex-1 bg-gray-700 text-white px-4 py-3 rounded-lg hover:bg-gray-600 transition-colors font-medium"
+                    disabled={saving}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 bg-yellow-600 text-white px-4 py-3 rounded-lg hover:bg-yellow-700 transition-colors font-medium"
+                    disabled={saving}
+                    className="flex-1 px-4 py-2 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white rounded-lg hover:from-yellow-600 hover:to-yellow-700 transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
                   >
-                    {editingAdmin ? 'Actualizar' : 'Crear Admin'}
+                    {saving ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Guardando...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        {modalMode === 'create' ? 'Crear' : 'Guardar'}
+                      </>
+                    )}
                   </button>
                 </div>
               </form>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Modal de Resetear Contraseña */}
-      {isResetPasswordModalOpen && resetPasswordAdmin && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-gray-700">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-2xl font-bold text-white">
+        {/* Modal de Resetear Contraseña */}
+        {modalMode === 'resetPassword' && editingAdmin && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+              <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white px-6 py-4 flex items-center justify-between rounded-t-xl">
+                <h3 className="text-xl font-semibold flex items-center gap-2">
+                  <Key className="w-6 h-6" />
                   Resetear Contraseña
                 </h3>
                 <button
-                  onClick={handleCloseResetPassword}
-                  className="text-gray-400 hover:text-white"
+                  onClick={handleCloseModal}
+                  className="p-1 hover:bg-purple-600 rounded-lg transition-colors"
                 >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  <X className="w-6 h-6" />
                 </button>
               </div>
 
-              {/* Información del administrador */}
-              <div className="mb-6 bg-gray-700 rounded-lg p-4">
-                <p className="text-sm text-gray-400 mb-1">Administrador</p>
-                <p className="text-lg font-bold text-white">{resetPasswordAdmin.name || 'Sin nombre'}</p>
-                <p className="text-sm text-gray-400">{resetPasswordAdmin.email}</p>
-              </div>
-
-              {resetError && (
-                <div className="mb-4 bg-red-500 bg-opacity-20 border border-red-500 text-red-200 px-4 py-3 rounded-lg text-sm">
-                  {resetError}
-                </div>
-              )}
-
-              {resetSuccess && (
-                <div className="mb-4 bg-green-500 bg-opacity-20 border border-green-500 text-green-200 px-4 py-3 rounded-lg text-sm">
-                  {resetSuccess}
-                </div>
-              )}
-
-              <form onSubmit={handleResetPassword} className="space-y-4">
+              <form onSubmit={handleResetPassword} className="p-6 space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <p className="text-gray-700 mb-4">
+                    Reseteando contraseña para: <strong>{editingAdmin.name}</strong>
+                  </p>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Nueva Contraseña *
                   </label>
                   <input
-                    type="password"
+                    type="text"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent text-white"
-                    placeholder="Por defecto: DNI del usuario"
-                    required
-                    minLength={6}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    placeholder="Mínimo 6 caracteres"
+                    disabled={saving}
                   />
-                  <p className="text-xs text-gray-400 mt-1">
-                    Por defecto se usa el DNI como contraseña (mínimo 6 caracteres)
+                  <p className="text-xs text-gray-500 mt-2">
+                    Por defecto se usa el DNI como contraseña
                   </p>
                 </div>
 
-                <div className="flex space-x-3 pt-4">
+                {error && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                    {error}
+                  </div>
+                )}
+
+                {success && (
+                  <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
+                    {success}
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-4">
                   <button
                     type="button"
-                    onClick={handleCloseResetPassword}
-                    className="flex-1 bg-gray-700 text-white px-4 py-3 rounded-lg hover:bg-gray-600 transition-colors font-medium"
+                    onClick={handleCloseModal}
+                    disabled={saving}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 bg-purple-600 text-white px-4 py-3 rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                    disabled={saving}
+                    className="flex-1 px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2"
                   >
-                    Resetear Contraseña
+                    {saving ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Actualizando...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        Actualizar
+                      </>
+                    )}
                   </button>
                 </div>
               </form>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

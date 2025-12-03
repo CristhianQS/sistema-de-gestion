@@ -7,7 +7,7 @@ const PublicView = lazy(() => import('../pages/PublicView'));
 const VistaBlack = lazy(() => import('../pages/VistaBlack'));
 const VistaOro = lazy(() => import('../pages/VistaOro'));
 const VistaPlata = lazy(() => import('../pages/VistaPlata'));
-const ConfiguracionChatbot = lazy(() => import('../components/ConfiguracionChatbot'));
+const ConfiguracionChatbot = lazy(() => import('../features/chatbot/components/ConfiguracionChatbot'));
 
 /**
  * Componente de carga mientras se cargan las vistas

@@ -260,7 +260,7 @@ const GestionPabellones: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="text-gray-400">Cargando pabellones...</div>
+        <div className="text-gray-600">Cargando pabellones...</div>
       </div>
     );
   }
@@ -270,8 +270,8 @@ const GestionPabellones: React.FC = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-white">Gestión de Pabellones y Salones</h2>
-          <p className="text-gray-400 mt-1">Administra los pabellones y sus salones</p>
+          <h2 className="text-2xl font-bold text-gray-800">Gestión de Pabellones y Salones</h2>
+          <p className="text-gray-600 mt-1">Administra los pabellones y sus salones</p>
         </div>
         <button
           onClick={() => handleOpenModalPabellon()}
@@ -298,11 +298,11 @@ const GestionPabellones: React.FC = () => {
 
       {/* Lista de Pabellones */}
       {pabellones.length === 0 ? (
-        <div className="bg-gray-800 rounded-lg p-12 text-center border border-gray-700">
+        <div className="bg-white rounded-lg p-12 text-center border border-gray-200">
           <svg className="w-16 h-16 text-gray-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
           </svg>
-          <h3 className="text-xl font-semibold text-gray-400 mb-2">No hay pabellones registrados</h3>
+          <h3 className="text-xl font-semibold text-gray-600 mb-2">No hay pabellones registrados</h3>
           <p className="text-gray-500">Crea tu primer pabellón para comenzar</p>
         </div>
       ) : (
@@ -310,13 +310,13 @@ const GestionPabellones: React.FC = () => {
           {pabellones.map((pabellon) => (
             <div
               key={pabellon.id}
-              className="bg-gray-800 rounded-lg overflow-hidden border border-gray-700"
+              className="bg-white rounded-lg overflow-hidden border border-gray-200"
             >
               {/* Header del Pabellón */}
-              <div className="flex items-start p-6 border-b border-gray-700">
+              <div className="flex items-start p-6 border-b border-gray-200">
                 {/* Imagen */}
                 {pabellon.imagen_url && (
-                  <div className="w-24 h-24 rounded-lg overflow-hidden bg-gray-900 mr-4 flex-shrink-0">
+                  <div className="w-24 h-24 rounded-lg overflow-hidden bg-gray-50 mr-4 flex-shrink-0">
                     <img
                       src={pabellon.imagen_url}
                       alt={pabellon.nombre}
@@ -330,9 +330,9 @@ const GestionPabellones: React.FC = () => {
 
                 {/* Información */}
                 <div className="flex-1">
-                  <h3 className="text-2xl font-bold text-white mb-2">{pabellon.nombre}</h3>
+                  <h3 className="text-2xl font-bold text-gray-800 mb-2">{pabellon.nombre}</h3>
                   {pabellon.descripcion && (
-                    <p className="text-gray-400 text-sm">{pabellon.descripcion}</p>
+                    <p className="text-gray-600 text-sm">{pabellon.descripcion}</p>
                   )}
                 </div>
 
@@ -361,7 +361,7 @@ const GestionPabellones: React.FC = () => {
 
               {/* Salones */}
               <div className="p-6">
-                <h4 className="text-lg font-semibold text-gray-300 mb-4">
+                <h4 className="text-lg font-semibold text-gray-700 mb-4">
                   Salones ({salones[pabellon.id]?.length || 0})
                 </h4>
 
@@ -372,10 +372,10 @@ const GestionPabellones: React.FC = () => {
                     {salones[pabellon.id].map((salon) => (
                       <div
                         key={salon.id}
-                        className="bg-gray-700 rounded-lg p-4 border border-gray-600 hover:border-purple-500 transition-all"
+                        className="bg-gray-50 rounded-lg p-4 border border-gray-300 hover:border-purple-500 transition-all"
                       >
                         <div className="flex justify-between items-start mb-2">
-                          <h5 className="font-bold text-white text-lg">{salon.nombre}</h5>
+                          <h5 className="font-bold text-gray-800 text-lg">{salon.nombre}</h5>
                           <div className="flex space-x-1">
                             <button
                               onClick={() => handleOpenModalSalon(pabellon, salon)}
@@ -396,7 +396,7 @@ const GestionPabellones: React.FC = () => {
                           </div>
                         </div>
                         {salon.capacidad && (
-                          <p className="text-gray-400 text-xs">
+                          <p className="text-gray-600 text-xs">
                             Capacidad: {salon.capacidad} personas
                           </p>
                         )}
@@ -415,16 +415,16 @@ const GestionPabellones: React.FC = () => {
 
       {/* Modal Pabellón */}
       {isModalPabellonOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl border border-gray-700 my-8">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl border border-gray-200 my-8">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-2xl font-bold text-white">
+                <h3 className="text-2xl font-bold text-gray-800">
                   {editingPabellon ? 'Editar Pabellón' : 'Nuevo Pabellón'}
                 </h3>
                 <button
                   onClick={() => setIsModalPabellonOpen(false)}
-                  className="text-gray-400 hover:text-white"
+                  className="text-gray-600 hover:text-gray-800"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -446,33 +446,33 @@ const GestionPabellones: React.FC = () => {
 
               <form onSubmit={handleSubmitPabellon} className="space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Nombre del Pabellón *
                   </label>
                   <input
                     type="text"
                     value={formPabellon.nombre}
                     onChange={(e) => setFormPabellon({ ...formPabellon, nombre: e.target.value })}
-                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-white"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-800"
                     placeholder="Ej: Pabellón A, Pabellón B..."
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     URL de la Imagen
                   </label>
                   <input
                     type="url"
                     value={formPabellon.imagen_url}
                     onChange={(e) => setFormPabellon({ ...formPabellon, imagen_url: e.target.value })}
-                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-white"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-800"
                     placeholder="https://ejemplo.com/imagen.jpg"
                   />
                   {formPabellon.imagen_url && (
                     <div className="mt-3">
-                      <p className="text-xs text-gray-400 mb-2">Vista previa:</p>
+                      <p className="text-xs text-gray-600 mb-2">Vista previa:</p>
                       <img
                         src={formPabellon.imagen_url}
                         alt="Vista previa"
@@ -486,14 +486,14 @@ const GestionPabellones: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Descripción
                   </label>
                   <textarea
                     value={formPabellon.descripcion}
                     onChange={(e) => setFormPabellon({ ...formPabellon, descripcion: e.target.value })}
                     rows={3}
-                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-white resize-none"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-800 resize-none"
                     placeholder="Descripción del pabellón..."
                   />
                 </div>
@@ -502,7 +502,7 @@ const GestionPabellones: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setIsModalPabellonOpen(false)}
-                    className="flex-1 bg-gray-700 text-white px-4 py-3 rounded-lg hover:bg-gray-600 transition-colors font-medium"
+                    className="flex-1 bg-gray-50 text-gray-800 px-4 py-3 rounded-lg hover:bg-gray-100 transition-colors font-medium"
                   >
                     Cancelar
                   </button>
@@ -521,19 +521,19 @@ const GestionPabellones: React.FC = () => {
 
       {/* Modal Salón */}
       {isModalSalonOpen && selectedPabellon && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-gray-700">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md border border-gray-200">
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
                 <div>
-                  <h3 className="text-2xl font-bold text-white">
+                  <h3 className="text-2xl font-bold text-gray-800">
                     {editingSalon ? 'Editar Salón' : 'Nuevo Salón'}
                   </h3>
-                  <p className="text-sm text-gray-400 mt-1">{selectedPabellon.nombre}</p>
+                  <p className="text-sm text-gray-600 mt-1">{selectedPabellon.nombre}</p>
                 </div>
                 <button
                   onClick={() => setIsModalSalonOpen(false)}
-                  className="text-gray-400 hover:text-white"
+                  className="text-gray-600 hover:text-gray-800"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -555,42 +555,42 @@ const GestionPabellones: React.FC = () => {
 
               <form onSubmit={handleSubmitSalon} className="space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Nombre del Salón *
                   </label>
                   <input
                     type="text"
                     value={formSalon.nombre}
                     onChange={(e) => setFormSalon({ ...formSalon, nombre: e.target.value })}
-                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-white"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-800"
                     placeholder="Ej: A101, A102, A201..."
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Capacidad (personas)
                   </label>
                   <input
                     type="number"
                     value={formSalon.capacidad}
                     onChange={(e) => setFormSalon({ ...formSalon, capacidad: e.target.value })}
-                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-white"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-800"
                     placeholder="Ej: 30"
                     min="0"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Descripción
                   </label>
                   <textarea
                     value={formSalon.descripcion}
                     onChange={(e) => setFormSalon({ ...formSalon, descripcion: e.target.value })}
                     rows={3}
-                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-white resize-none"
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-gray-800 resize-none"
                     placeholder="Características del salón..."
                   />
                 </div>
@@ -599,7 +599,7 @@ const GestionPabellones: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setIsModalSalonOpen(false)}
-                    className="flex-1 bg-gray-700 text-white px-4 py-3 rounded-lg hover:bg-gray-600 transition-colors font-medium"
+                    className="flex-1 bg-gray-50 text-gray-800 px-4 py-3 rounded-lg hover:bg-gray-100 transition-colors font-medium"
                   >
                     Cancelar
                   </button>

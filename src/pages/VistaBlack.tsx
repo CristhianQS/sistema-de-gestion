@@ -1,20 +1,23 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import GestionAreas from '../components/GestionAreas';
 import GestionPabellones from '../components/GestionPabellones';
 import VisualizarReportes from '../components/VisualizarReportes';
 import GestionAdminOro from '../components/GestionAdminOro';
+import GestionAdminPlata from '../components/GestionAdminPlata';
 import ListaUsuariosAreas from '../components/ListaUsuariosAreas';
 import GestionDatosAlumnos from '../components/GestionDatosAlumnos';
 
 const VistaBlack: React.FC = () => {
   const { user, logout } = useAuth();
-  const [currentView, setCurrentView] = useState<'dashboard' | 'areas' | 'pabellones' | 'reportes' | 'admin_oro' | 'lista_usuarios' | 'datos_alumnos'>('dashboard');
+  const navigate = useNavigate();
+  const [currentView, setCurrentView] = useState<'dashboard' | 'areas' | 'pabellones' | 'reportes' | 'admin_oro' | 'admin_plata' | 'lista_usuarios' | 'datos_alumnos'>('dashboard');
 
   // Vista de Admin Oro
   if (currentView === 'admin_oro') {
     return (
-      <div className="min-h-screen bg-gray-900">
+      <div className="min-h-screen bg-gray-50">
         <header className="shadow-lg" style={{ backgroundColor: '#000000ff' }}>
           <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
             <div className="flex items-center space-x-4">
@@ -47,10 +50,46 @@ const VistaBlack: React.FC = () => {
     );
   }
 
+  // Vista de Admin Plata
+  if (currentView === 'admin_plata') {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <header className="shadow-lg" style={{ backgroundColor: '#000000ff' }}>
+          <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={() => setCurrentView('dashboard')}
+                className="text-gray-300 hover:text-white"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+              </button>
+              <div>
+                <h1 className="text-xl font-bold text-white">Panel Admin Black</h1>
+                <p className="text-sm text-gray-300">{user?.name || user?.email}</p>
+              </div>
+            </div>
+            <button
+              onClick={logout}
+              className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium"
+            >
+              Cerrar Sesión
+            </button>
+          </div>
+        </header>
+
+        <main className="max-w-7xl mx-auto px-4 py-8">
+          <GestionAdminPlata />
+        </main>
+      </div>
+    );
+  }
+
   // Vista de Reportes
   if (currentView === 'reportes') {
     return (
-      <div className="min-h-screen bg-gray-900">
+      <div className="min-h-screen bg-gray-50">
         <header className="shadow-lg" style={{ backgroundColor: '#000000ff' }}>
           <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
             <div className="flex items-center space-x-4">
@@ -86,7 +125,7 @@ const VistaBlack: React.FC = () => {
   // Vista de Pabellones
   if (currentView === 'pabellones') {
     return (
-      <div className="min-h-screen bg-gray-900">
+      <div className="min-h-screen bg-gray-50">
         <header className="shadow-lg" style={{ backgroundColor: '#000000ff' }}>
           <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
             <div className="flex items-center space-x-4">
@@ -122,7 +161,7 @@ const VistaBlack: React.FC = () => {
   // Vista de Áreas
   if (currentView === 'areas') {
     return (
-      <div className="min-h-screen bg-gray-900">
+      <div className="min-h-screen bg-gray-50">
         <header className="shadow-lg" style={{ backgroundColor: '#000000ff' }}>
           <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
             <div className="flex items-center space-x-4">
@@ -158,7 +197,7 @@ const VistaBlack: React.FC = () => {
   // Vista de Lista de Usuarios y Áreas
   if (currentView === 'lista_usuarios') {
     return (
-      <div className="min-h-screen bg-gray-900">
+      <div className="min-h-screen bg-gray-50">
         <header className="shadow-lg" style={{ backgroundColor: '#000000ff' }}>
           <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
             <div className="flex items-center space-x-4">
@@ -194,7 +233,7 @@ const VistaBlack: React.FC = () => {
   // Vista de Datos de Alumnos
   if (currentView === 'datos_alumnos') {
     return (
-      <div className="min-h-screen bg-gray-900">
+      <div className="min-h-screen bg-gray-50">
         <header className="shadow-lg" style={{ backgroundColor: '#000000ff' }}>
           <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
             <div className="flex items-center space-x-4">
@@ -295,16 +334,19 @@ const VistaBlack: React.FC = () => {
           </div>
 
           {/* Card: Gestionar Admin Plata */}
-          <div className="bg-white rounded-lg p-6 shadow-lg border border-gray-200 hover:border-gray-400 transition-all">
-            <div className="w-12 h-12 bg-gray-400 rounded-lg flex items-center justify-center mb-4">
+          <div className="bg-white rounded-lg p-6 shadow-lg border border-gray-200 hover:border-gray-500 transition-all">
+            <div className="w-12 h-12 bg-gray-500 rounded-lg flex items-center justify-center mb-4">
               <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
             </div>
             <h3 className="text-xl font-bold text-gray-800 mb-2">Admin Plata</h3>
-            <p className="text-gray-600 mb-4">Ver usuarios con acceso de solo lectura</p>
-            <button className="w-full bg-gray-400 text-white px-4 py-2 rounded-lg hover:bg-gray-300 transition-colors font-medium">
-              Ver Lista
+            <p className="text-gray-600 mb-4">Gestionar usuarios con acceso de solo lectura</p>
+            <button
+              onClick={() => setCurrentView('admin_plata')}
+              className="w-full bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors font-medium"
+            >
+              Administrar
             </button>
           </div>
 
@@ -391,7 +433,7 @@ const VistaBlack: React.FC = () => {
             </h3>
             <p className="text-gray-600 mb-4">Personalizar prompts y mensajes del asistente</p>
             <button
-              onClick={() => window.location.href = '/admin/chatbot-config'}
+              onClick={() => navigate('/admin/chatbot-config')}
               className="w-full bg-gradient-to-r from-pink-500 to-purple-600 text-white px-4 py-2 rounded-lg hover:from-pink-600 hover:to-purple-700 transition-all font-medium shadow-md"
             >
               Configurar

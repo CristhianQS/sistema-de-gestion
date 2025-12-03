@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStudentReports } from '../hooks/useStudentReports';
 
 interface StudentReportsModalProps {
@@ -186,8 +186,8 @@ const StudentReportsModal = ({ isOpen, onClose }: StudentReportsModalProps) => {
                     </thead>
                     <tbody className="divide-y divide-gray-200">
                       {reports.map((report) => (
-                        <>
-                          <tr key={report.id} className="hover:bg-gray-50 transition-colors">
+                        <React.Fragment key={report.id}>
+                          <tr className="hover:bg-gray-50 transition-colors">
                             <td className="px-4 py-3">
                               <div className="font-medium text-gray-900">{report.area_name}</div>
                               {report.area_description && (
@@ -209,13 +209,15 @@ const StudentReportsModal = ({ isOpen, onClose }: StudentReportsModalProps) => {
                                 {new Date(report.submitted_at).toLocaleDateString('es-PE', {
                                   day: '2-digit',
                                   month: '2-digit',
-                                  year: 'numeric'
+                                  year: 'numeric',
+                                  timeZone: 'America/Lima'
                                 })}
                               </div>
                               <div className="text-xs text-gray-500">
                                 {new Date(report.submitted_at).toLocaleTimeString('es-PE', {
                                   hour: '2-digit',
-                                  minute: '2-digit'
+                                  minute: '2-digit',
+                                  timeZone: 'America/Lima'
                                 })}
                               </div>
                             </td>
@@ -286,7 +288,8 @@ const StudentReportsModal = ({ isOpen, onClose }: StudentReportsModalProps) => {
                                           'salon_nombre',
                                           'pabellon_nombre',
                                           'salon_capacidad',
-                                          'pabellon_descripcion'
+                                          'pabellon_descripcion',
+                                          'ia_metadata'
                                         ];
                                         return !hiddenFields.includes(key.toLowerCase());
                                       })
@@ -322,7 +325,7 @@ const StudentReportsModal = ({ isOpen, onClose }: StudentReportsModalProps) => {
                               </td>
                             </tr>
                           )}
-                        </>
+                        </React.Fragment>
                       ))}
                     </tbody>
                   </table>

@@ -48,21 +48,39 @@ const ListaUsuariosAreas: React.FC = () => {
       // Cargar las áreas asignadas a cada usuario
       const usuariosConAreas = await Promise.all(
         (data || []).map(async (usuario) => {
-          const { data: userAreasData } = await supabase
-            .from('user_areas')
-            .select('area_id')
-            .eq('user_id', usuario.id);
+          let areas: Area[] = [];
 
-          if (userAreasData && userAreasData.length > 0) {
-            const areaIds = userAreasData.map(ua => ua.area_id);
-            const { data: areasData } = await supabase
+          // Admin Plata y Admin Oro usan area_id directamente
+          if ((usuario.role === 'admin_plata' || usuario.role === 'admin_oro') && usuario.area_id) {
+            const { data: areaData } = await supabase
               .from('areas')
               .select('id, name')
-              .in('id', areaIds);
+              .eq('id', usuario.area_id)
+              .single();
 
-            return { ...usuario, areas: areasData || [] };
+            if (areaData) {
+              areas = [areaData];
+            }
           }
-          return { ...usuario, areas: [] };
+          // Otros roles pueden tener múltiples áreas en user_areas
+          else {
+            const { data: userAreasData } = await supabase
+              .from('user_areas')
+              .select('area_id')
+              .eq('user_id', usuario.id);
+
+            if (userAreasData && userAreasData.length > 0) {
+              const areaIds = userAreasData.map(ua => ua.area_id);
+              const { data: areasData } = await supabase
+                .from('areas')
+                .select('id, name')
+                .in('id', areaIds);
+
+              areas = areasData || [];
+            }
+          }
+
+          return { ...usuario, areas };
         })
       );
 
@@ -88,9 +106,9 @@ const ListaUsuariosAreas: React.FC = () => {
       case 'admin_black':
         return 'bg-black text-yellow-500 border border-yellow-500';
       case 'admin_oro':
-        return 'bg-yellow-600 text-white';
+        return 'bg-gradient-to-r from-yellow-500 to-yellow-600 text-white shadow-md';
       case 'admin_plata':
-        return 'bg-gray-400 text-white';
+        return 'bg-gradient-to-r from-gray-400 to-gray-500 text-white shadow-md';
       default:
         return 'bg-gray-500 text-white';
     }
@@ -123,7 +141,7 @@ const ListaUsuariosAreas: React.FC = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="text-gray-400">Cargando usuarios...</div>
+        <div className="text-gray-600">Cargando usuarios...</div>
       </div>
     );
   }
@@ -131,41 +149,41 @@ const ListaUsuariosAreas: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold text-white">Lista de Usuarios y Áreas</h2>
-        <p className="text-gray-400 mt-1">
+      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+        <h2 className="text-3xl font-bold text-gray-800">Lista de Usuarios y Áreas</h2>
+        <p className="text-gray-600 mt-2">
           Visualiza todos los usuarios y sus áreas asignadas
         </p>
       </div>
 
       {/* Pestañas de filtro */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-3">
         <button
           onClick={() => setViewMode('all')}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+          className={`px-6 py-3 rounded-xl font-medium transition-all shadow-sm ${
             viewMode === 'all'
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+              ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 scale-105'
+              : 'bg-white text-gray-700 hover:bg-blue-50 border border-gray-200'
           }`}
         >
           Todos ({usuarios.length})
         </button>
         <button
           onClick={() => setViewMode('admin_oro')}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+          className={`px-6 py-3 rounded-xl font-medium transition-all shadow-sm ${
             viewMode === 'admin_oro'
-              ? 'bg-yellow-600 text-white'
-              : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+              ? 'bg-yellow-500 text-white shadow-lg shadow-yellow-500/30 scale-105'
+              : 'bg-white text-gray-700 hover:bg-yellow-50 border border-gray-200'
           }`}
         >
           Admin Oro
         </button>
         <button
           onClick={() => setViewMode('admin_plata')}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+          className={`px-6 py-3 rounded-xl font-medium transition-all shadow-sm ${
             viewMode === 'admin_plata'
-              ? 'bg-gray-400 text-white'
-              : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+              ? 'bg-gray-500 text-white shadow-lg shadow-gray-500/30 scale-105'
+              : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
           }`}
         >
           Admin Plata
@@ -173,64 +191,69 @@ const ListaUsuariosAreas: React.FC = () => {
       </div>
 
       {/* Búsqueda */}
-      <div>
+      <div className="relative">
+        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+          <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
         <input
           type="text"
           placeholder="Buscar por nombre, email, DNI o área..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full px-4 py-3 bg-gray-800 border border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-600 focus:border-transparent text-white placeholder-gray-400"
+          className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-800 placeholder-gray-400 shadow-sm"
         />
       </div>
 
       {/* Lista de usuarios */}
       {filteredUsuarios.length === 0 ? (
-        <div className="bg-gray-800 rounded-lg p-12 text-center border border-gray-700">
-          <svg className="w-16 h-16 text-gray-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="bg-white rounded-xl p-12 text-center border border-gray-200 shadow-sm">
+          <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
           </svg>
-          <h3 className="text-xl font-semibold text-gray-400 mb-2">No se encontraron usuarios</h3>
+          <h3 className="text-xl font-semibold text-gray-700 mb-2">No se encontraron usuarios</h3>
           <p className="text-gray-500">
             {searchTerm ? 'Intenta con otro término de búsqueda' : 'No hay usuarios registrados'}
           </p>
         </div>
       ) : (
-        <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-900">
+              <thead className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Usuario
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     DNI
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Rol
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Áreas Asignadas
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Fecha de Creación
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-700">
+              <tbody className="divide-y divide-gray-100">
                 {filteredUsuarios.map((usuario) => (
-                  <tr key={usuario.id} className="hover:bg-gray-750 transition-colors">
+                  <tr key={usuario.id} className="hover:bg-blue-50 transition-colors">
                     <td className="px-6 py-4">
                       <div>
-                        <div className="font-medium text-white">
+                        <div className="font-semibold text-gray-800">
                           {usuario.name || 'Sin nombre'}
                         </div>
-                        <div className="text-sm text-gray-400">{usuario.email}</div>
+                        <div className="text-sm text-gray-500">{usuario.email}</div>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-white">
-                        {usuario.dni || <span className="text-gray-500">-</span>}
+                      <div className="text-sm text-gray-700 font-medium">
+                        {usuario.dni || <span className="text-gray-400">-</span>}
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -239,23 +262,32 @@ const ListaUsuariosAreas: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex flex-wrap gap-1">
+                      <div className="flex flex-wrap gap-2">
                         {usuario.areas.length > 0 ? (
-                          usuario.areas.map((area) => (
-                            <span
-                              key={area.id}
-                              className="inline-block bg-blue-600 bg-opacity-20 text-blue-400 text-xs px-2 py-1 rounded"
-                            >
-                              {area.name}
-                            </span>
-                          ))
+                          usuario.areas.map((area) => {
+                            // Color del badge según el rol
+                            const areaBadgeColor = usuario.role === 'admin_oro'
+                              ? 'bg-yellow-100 text-yellow-700 border border-yellow-200'
+                              : usuario.role === 'admin_plata'
+                              ? 'bg-gray-100 text-gray-700 border border-gray-300'
+                              : 'bg-blue-100 text-blue-700 border border-blue-200';
+
+                            return (
+                              <span
+                                key={area.id}
+                                className={`inline-flex items-center text-xs px-3 py-1 rounded-full font-medium ${areaBadgeColor}`}
+                              >
+                                {area.name}
+                              </span>
+                            );
+                          })
                         ) : (
-                          <span className="text-gray-500 text-sm">Sin áreas</span>
+                          <span className="text-gray-400 text-sm italic">Sin áreas</span>
                         )}
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-gray-400">
+                      <div className="text-sm text-gray-600">
                         {formatDate(usuario.created_at)}
                       </div>
                     </td>
@@ -268,15 +300,22 @@ const ListaUsuariosAreas: React.FC = () => {
       )}
 
       {/* Resumen */}
-      <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200 shadow-sm">
         <div className="flex items-center justify-between">
-          <p className="text-gray-400">
-            Mostrando <span className="text-white font-medium">{filteredUsuarios.length}</span> de{' '}
-            <span className="text-white font-medium">{usuarios.length}</span> usuarios
-          </p>
+          <div className="flex items-center space-x-3">
+            <div className="bg-blue-100 rounded-full p-2">
+              <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <p className="text-gray-700">
+              Mostrando <span className="text-blue-600 font-bold">{filteredUsuarios.length}</span> de{' '}
+              <span className="text-blue-600 font-bold">{usuarios.length}</span> usuarios
+            </p>
+          </div>
           <button
             onClick={loadUsuarios}
-            className="text-blue-500 hover:text-blue-400 text-sm font-medium flex items-center space-x-1"
+            className="bg-white text-blue-600 hover:bg-blue-600 hover:text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center space-x-2 transition-all border border-blue-200 shadow-sm"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />

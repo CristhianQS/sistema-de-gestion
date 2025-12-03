@@ -4,10 +4,10 @@ import ModalLogin from '../components/ModalLogin';
 import ModalVerificarAlumno from '../components/modals/ModalVerificarAlumno';
 import ModalFormularioArea from '../components/modals/ModalFormularioArea';
 import StudentReportsModal from '../components/StudentReportsModal';
-import ChatbotAsistente from '../components/ChatbotAsistente';
+import ChatbotAsistente from '../features/chatbot/components/ChatbotAsistente';
 import { useAuth } from '../context/AuthContext';
-import { supabase } from '../lib/supabase';
 import type { Area, DataAlumno } from '../lib/supabase';
+import { getAllAreas } from '../services/database';
 
 const PublicView: React.FC = () => {
   const [isModalLoginOpen, setIsModalLoginOpen] = useState(false);
@@ -44,13 +44,8 @@ const PublicView: React.FC = () => {
 
   const loadAreas = async () => {
     try {
-      const { data, error } = await supabase
-        .from('areas')
-        .select('*')
-        .order('name', { ascending: true });
-
-      if (error) throw error;
-      setAreas(data || []);
+      const data = await getAllAreas();
+      setAreas(data);
     } catch (error) {
       console.error('Error al cargar áreas:', error);
     } finally {

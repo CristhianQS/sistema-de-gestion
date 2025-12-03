@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { chatbotConfig, actualizarConfig } from '../config/chatbotPrompts';
+import { saveChatbotConfig, loadChatbotConfig, deleteChatbotConfig } from '../../../services/database/chatbot-config.service';
 
 /**
  * Componente para configurar los prompts del chatbot desde la interfaz
@@ -9,28 +10,103 @@ import { chatbotConfig, actualizarConfig } from '../config/chatbotPrompts';
  * - Mensajes de error
  * - Mensajes de confirmación
  * - Parámetros de validación
+ * - Prompts del sistema de IA
  */
 const ConfiguracionChatbot: React.FC = () => {
   const [config, setConfig] = useState(chatbotConfig);
   const [guardando, setGuardando] = useState(false);
+  const [cargando, setCargando] = useState(true);
   const [mensaje, setMensaje] = useState('');
+  const [error, setError] = useState('');
 
-  const handleGuardar = () => {
-    setGuardando(true);
-    actualizarConfig(config);
+  // Cargar configuración guardada al iniciar
+  useEffect(() => {
+    cargarConfiguracion();
+  }, []);
 
-    setTimeout(() => {
-      setGuardando(false);
-      setMensaje('✅ Configuración guardada exitosamente');
-      setTimeout(() => setMensaje(''), 3000);
-    }, 500);
-  };
+  const cargarConfiguracion = async () => {
+    try {
+      setCargando(true);
+      const configGuardada = await loadChatbotConfig();
 
-  const handleRestaurar = () => {
-    if (confirm('¿Estás seguro de restaurar la configuración por defecto?')) {
-      window.location.reload();
+      if (configGuardada) {
+        // Merge con la configuración actual para preservar las funciones
+        const configMerged = {
+          ...chatbotConfig,
+          mensajes: {
+            ...chatbotConfig.mensajes,
+            ...configGuardada.mensajes
+          },
+          solicitudes: {
+            ...chatbotConfig.solicitudes,
+            ...configGuardada.solicitudes
+          },
+          confirmaciones: {
+            ...chatbotConfig.confirmaciones,
+            ...configGuardada.confirmaciones
+          },
+          validacion: configGuardada.validacion || chatbotConfig.validacion,
+          sistemPrompts: configGuardada.sistemPrompts || chatbotConfig.sistemPrompts
+        };
+
+        setConfig(configMerged);
+        actualizarConfig(configMerged);
+        setMensaje('✅ Configuración personalizada cargada');
+        setTimeout(() => setMensaje(''), 3000);
+      }
+    } catch (err) {
+      console.error('Error al cargar configuración:', err);
+      setError('⚠️ Error al cargar configuración guardada, usando valores por defecto');
+      setTimeout(() => setError(''), 5000);
+    } finally {
+      setCargando(false);
     }
   };
+
+  const handleGuardar = async () => {
+    setGuardando(true);
+    setError('');
+
+    try {
+      await saveChatbotConfig(config);
+      actualizarConfig(config);
+
+      setMensaje('✅ Configuración guardada permanentemente en la base de datos');
+      setTimeout(() => setMensaje(''), 3000);
+    } catch (err) {
+      console.error('Error al guardar:', err);
+      setError('❌ Error al guardar la configuración. Intenta nuevamente.');
+      setTimeout(() => setError(''), 5000);
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  const handleRestaurar = async () => {
+    if (confirm('¿Estás seguro de restaurar la configuración por defecto? Esto eliminará todas las personalizaciones guardadas.')) {
+      try {
+        setGuardando(true);
+        await deleteChatbotConfig();
+        window.location.reload();
+      } catch (err) {
+        console.error('Error al restaurar:', err);
+        setError('❌ Error al restaurar la configuración');
+        setTimeout(() => setError(''), 5000);
+        setGuardando(false);
+      }
+    }
+  };
+
+  if (cargando) {
+    return (
+      <div className="max-w-6xl mx-auto p-6 flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+          <p className="text-gray-600">Cargando configuración...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto p-6 bg-white rounded-lg shadow-lg">
@@ -46,6 +122,12 @@ const ConfiguracionChatbot: React.FC = () => {
       {mensaje && (
         <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-700">
           {mensaje}
+        </div>
+      )}
+
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+          {error}
         </div>
       )}
 
@@ -375,12 +457,22 @@ const ConfiguracionChatbot: React.FC = () => {
         </button>
       </div>
 
-      {/* ADVERTENCIA */}
-      <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-        <p className="text-sm text-yellow-800">
-          <strong>⚠️ Importante:</strong> Los cambios se aplicarán inmediatamente pero solo permanecerán durante la sesión actual.
-          Para cambios permanentes, modifica el archivo <code className="bg-yellow-100 px-2 py-1 rounded">src/config/chatbotPrompts.ts</code>
-        </p>
+      {/* INFORMACIÓN */}
+      <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-start gap-3">
+          <svg className="w-5 h-5 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div>
+            <p className="text-sm text-blue-800 font-medium mb-1">
+              💾 Configuración Permanente
+            </p>
+            <p className="text-sm text-blue-700">
+              Los cambios se guardan permanentemente en la base de datos y se aplican automáticamente a todos los usuarios.
+              El chatbot cargará esta configuración personalizada cada vez que se inicie.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

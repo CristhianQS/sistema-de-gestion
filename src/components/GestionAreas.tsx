@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import GestionCamposArea from './GestionCamposArea';
 import SupabaseImageUploader from './SupabaseImageUploader';
+import { FolderOpen, Plus, Edit2, Trash2, X, Save, FileText, Image as ImageIcon } from 'lucide-react';
 
 interface Area {
   id: number;
@@ -10,10 +11,12 @@ interface Area {
   image_url: string | null;
 }
 
+type ModalMode = 'create' | 'edit' | null;
+
 const GestionAreas: React.FC = () => {
   const [areas, setAreas] = useState<Area[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [editingArea, setEditingArea] = useState<Area | null>(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -22,8 +25,7 @@ const GestionAreas: React.FC = () => {
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  
-  // Estado para gestión de campos
+  const [saving, setSaving] = useState(false);
   const [selectedAreaForFields, setSelectedAreaForFields] = useState<{ id: number; name: string } | null>(null);
 
   useEffect(() => {
@@ -47,7 +49,6 @@ const GestionAreas: React.FC = () => {
     }
   };
 
-  // Si está gestionando campos de un área específica
   if (selectedAreaForFields) {
     return (
       <GestionCamposArea
@@ -58,39 +59,40 @@ const GestionAreas: React.FC = () => {
     );
   }
 
-  const handleOpenModal = (area?: Area) => {
-    if (area) {
-      setEditingArea(area);
-      setFormData({
-        name: area.name,
-        description: area.description || '',
-        image_url: area.image_url || ''
-      });
-    } else {
-      setEditingArea(null);
-      setFormData({
-        name: '',
-        description: '',
-        image_url: ''
-      });
-    }
-    setIsModalOpen(true);
+  const handleOpenCreateModal = () => {
+    setModalMode('create');
+    setEditingArea(null);
+    setFormData({
+      name: '',
+      description: '',
+      image_url: ''
+    });
+    setError('');
+    setSuccess('');
+  };
+
+  const handleOpenEditModal = (area: Area) => {
+    setModalMode('edit');
+    setEditingArea(area);
+    setFormData({
+      name: area.name,
+      description: area.description || '',
+      image_url: area.image_url || ''
+    });
     setError('');
     setSuccess('');
   };
 
   const handleCloseModal = () => {
-    setIsModalOpen(false);
+    setModalMode(null);
     setEditingArea(null);
     setFormData({ name: '', description: '', image_url: '' });
     setError('');
+    setSuccess('');
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+  const handleImageUpload = (url: string) => {
+    setFormData({ ...formData, image_url: url });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -99,58 +101,50 @@ const GestionAreas: React.FC = () => {
     setSuccess('');
 
     if (!formData.name.trim()) {
-      setError('El nombre del área es requerido');
+      setError('El nombre del área es obligatorio');
       return;
     }
 
-    if (!formData.description.trim()) {
-      setError('La descripción es requerida');
-      return;
-    }
-
-    if (!formData.image_url.trim()) {
-      setError('La imagen es requerida');
-      return;
-    }
+    setSaving(true);
 
     try {
       const areaData = {
         name: formData.name.trim(),
-        description: formData.description.trim(),
-        image_url: formData.image_url.trim()
+        description: formData.description.trim() || null,
+        image_url: formData.image_url.trim() || null
       };
 
-      if (editingArea) {
+      if (modalMode === 'edit' && editingArea) {
         const { error } = await supabase
           .from('areas')
           .update(areaData)
           .eq('id', editingArea.id);
 
         if (error) throw error;
-        setSuccess('Área actualizada correctamente');
+        setSuccess('✅ Área actualizada correctamente');
       } else {
         const { error } = await supabase
           .from('areas')
           .insert([areaData]);
 
         if (error) throw error;
-        setSuccess('Área creada correctamente');
+        setSuccess('✅ Área creada correctamente');
       }
 
       await loadAreas();
       setTimeout(() => {
         handleCloseModal();
-        setSuccess('');
-      }, 1500);
+      }, 1000);
     } catch (error: any) {
       console.error('Error:', error);
-      setError(error.message || 'Error al guardar el área');
+      setError('Error al guardar: ' + (error.message || 'Error desconocido'));
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async (area: Area) => {
     try {
-      // Primero verificar si hay usuarios asignados a esta área
       const { data: users, error: checkError } = await supabase
         .from('admin_user')
         .select('id')
@@ -167,8 +161,7 @@ const GestionAreas: React.FC = () => {
         return;
       }
 
-      // Si no hay usuarios, confirmar eliminación
-      if (!window.confirm(`¿Estás seguro de eliminar el área "${area.name}"?`)) {
+      if (!window.confirm(`¿Estás seguro de eliminar el área "${area.name}"?\n\nEsta acción no se puede deshacer.`)) {
         return;
       }
 
@@ -179,13 +172,12 @@ const GestionAreas: React.FC = () => {
 
       if (error) throw error;
 
-      setSuccess('Área eliminada correctamente');
+      setSuccess('✅ Área eliminada correctamente');
       await loadAreas();
       setTimeout(() => setSuccess(''), 3000);
     } catch (error: any) {
       console.error('Error:', error);
 
-      // Manejo específico de error de clave foránea
       if (error.code === '23503') {
         setError(
           `No se puede eliminar el área "${area.name}" porque tiene usuarios asignados. ` +
@@ -201,211 +193,267 @@ const GestionAreas: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-gray-600">Cargando áreas...</div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando áreas...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold text-white">Gestión de Áreas</h2>
-          <p className="text-gray-400 mt-1">Administra las áreas del sistema</p>
-        </div>
-        <button
-          onClick={() => handleOpenModal()}
-          className="bg-yellow-500 text-black px-6 py-2 rounded-lg hover:bg-yellow-400 transition-colors font-medium flex items-center space-x-2"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          <span>Nueva Área</span>
-        </button>
-      </div>
-
-      {/* Mensajes */}
-      {error && (
-        <div className="bg-red-500 bg-opacity-20 border border-red-500 text-red-200 px-4 py-3 rounded-lg">
-          {error}
-        </div>
-      )}
-      {success && (
-        <div className="bg-green-500 bg-opacity-20 border border-green-500 text-green-200 px-4 py-3 rounded-lg">
-          {success}
-        </div>
-      )}
-
-      {/* Lista de Áreas */}
-      {areas.length === 0 ? (
-        <div className="bg-gray-800 rounded-lg p-12 text-center">
-          <svg className="w-16 h-16 text-gray-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-          </svg>
-          <h3 className="text-xl font-semibold text-gray-400 mb-2">No hay áreas registradas</h3>
-          <p className="text-gray-500">Crea tu primera área para comenzar</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {areas.map((area) => (
-            <div
-              key={area.id}
-              className="bg-gray-800 rounded-lg overflow-hidden border border-gray-700 hover:border-yellow-500 transition-all shadow-lg"
+    <div className="min-h-screen bg-gray-50 py-8 px-4">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
+                <FolderOpen className="w-8 h-8 text-yellow-600" />
+                Gestión de Áreas
+              </h1>
+              <p className="text-gray-600 mt-2">
+                Administra las áreas del sistema de gestión
+              </p>
+            </div>
+            <button
+              onClick={handleOpenCreateModal}
+              className="flex items-center gap-2 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white px-6 py-3 rounded-xl hover:from-yellow-600 hover:to-yellow-700 transition-all shadow-lg shadow-yellow-600/30"
             >
-              {/* Imagen del área */}
-              <div className="h-48 overflow-hidden bg-gray-900">
-                <img
-                  src={area.image_url || 'https://via.placeholder.com/400x300?text=Sin+Imagen'}
-                  alt={area.name}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Error+al+cargar';
-                  }}
-                />
-              </div>
+              <Plus className="w-5 h-5" />
+              Nueva Área
+            </button>
+          </div>
+        </div>
 
-              {/* Contenido */}
-              <div className="p-6">
-                <div className="mb-4">
-                  <h3 className="text-xl font-bold text-white mb-2">{area.name}</h3>
-                  <p className="text-sm text-gray-400 line-clamp-3">
-                    {area.description || 'Sin descripción'}
-                  </p>
+        {/* Mensajes */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+            {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4">
+            {success}
+          </div>
+        )}
+
+        {/* Lista de Áreas */}
+        {areas.length === 0 ? (
+          <div className="bg-white rounded-xl p-12 text-center border border-gray-200 shadow-sm">
+            <FolderOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-700 mb-2">No hay áreas registradas</h3>
+            <p className="text-gray-500">Crea tu primera área para comenzar</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {areas.map((area) => (
+              <div
+                key={area.id}
+                className="bg-white rounded-xl overflow-hidden border border-gray-200 hover:border-yellow-500 hover:shadow-lg transition-all"
+              >
+                {/* Imagen del área */}
+                <div className="h-48 overflow-hidden bg-gray-100">
+                  <img
+                    src={area.image_url || 'https://via.placeholder.com/400x300?text=Sin+Imagen'}
+                    alt={area.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Error+al+cargar';
+                    }}
+                  />
                 </div>
 
-                <div className="space-y-2">
-                  {/* Botón Gestionar Campos */}
-                  <button
-                    onClick={() => setSelectedAreaForFields({ id: area.id, name: area.name })}
-                    className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium flex items-center justify-center space-x-1"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    <span>Gestionar Campos</span>
-                  </button>
+                {/* Contenido */}
+                <div className="p-5">
+                  <div className="mb-4">
+                    <h3 className="text-xl font-bold text-gray-800 mb-2">{area.name}</h3>
+                    <p className="text-sm text-gray-600 line-clamp-3">
+                      {area.description || 'Sin descripción'}
+                    </p>
+                  </div>
 
-                  <div className="flex space-x-2">
+                  {/* Botones de acción */}
+                  <div className="space-y-2">
+                    {/* Botón Gestionar Campos */}
                     <button
-                      onClick={() => handleOpenModal(area)}
-                      className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center justify-center space-x-1"
+                      onClick={() => setSelectedAreaForFields({ id: area.id, name: area.name })}
+                      className="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white px-4 py-2.5 rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all text-sm font-medium flex items-center justify-center gap-2 shadow-md"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                      <span>Editar</span>
+                      <FileText className="w-4 h-4" />
+                      Gestionar Campos
                     </button>
-                    <button
-                      onClick={() => handleDelete(area)}
-                      className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium flex items-center justify-center space-x-1"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                      <span>Eliminar</span>
-                    </button>
+
+                    {/* Botones Editar y Eliminar */}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleOpenEditModal(area)}
+                        className="flex-1 bg-blue-500 text-white px-4 py-2.5 rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => handleDelete(area)}
+                        className="flex-1 bg-red-500 text-white px-4 py-2.5 rounded-lg hover:bg-red-600 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Eliminar
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
 
-      {/* Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-800 rounded-lg shadow-xl w-full max-w-2xl border border-gray-700">
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-2xl font-bold text-white">
-                  {editingArea ? 'Editar Área' : 'Nueva Área'}
+        {/* Modal de Crear/Editar */}
+        {modalMode && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              {/* Header del Modal */}
+              <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white px-6 py-4 flex items-center justify-between rounded-t-xl">
+                <h3 className="text-xl font-semibold flex items-center gap-2">
+                  {modalMode === 'create' ? (
+                    <>
+                      <Plus className="w-6 h-6" />
+                      Nueva Área
+                    </>
+                  ) : (
+                    <>
+                      <Edit2 className="w-6 h-6" />
+                      Editar Área
+                    </>
+                  )}
                 </h3>
-                <button onClick={handleCloseModal} className="text-gray-400 hover:text-white">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                <button
+                  onClick={handleCloseModal}
+                  className="p-1 hover:bg-yellow-600 rounded-lg transition-colors"
+                >
+                  <X className="w-6 h-6" />
                 </button>
               </div>
 
-              {error && (
-                <div className="mb-4 bg-red-500 bg-opacity-20 border border-red-500 text-red-200 px-4 py-3 rounded-lg text-sm">
-                  {error}
-                </div>
-              )}
-
-              {success && (
-                <div className="mb-4 bg-green-500 bg-opacity-20 border border-green-500 text-green-200 px-4 py-3 rounded-lg text-sm">
-                  {success}
-                </div>
-              )}
-
-              <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Formulario */}
+              <form onSubmit={handleSubmit} className="p-6 space-y-5">
                 {/* Nombre */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Nombre del Área *
                   </label>
                   <input
                     type="text"
                     name="name"
                     value={formData.name}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-white placeholder-gray-400"
-                    placeholder="Ej: Sistemas, Contabilidad, Recursos Humanos..."
-                    required
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                    placeholder="Ej: Mantenimiento, Tecnología, etc."
+                    disabled={saving}
                   />
                 </div>
 
                 {/* Descripción */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Descripción *
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Descripción
                   </label>
                   <textarea
                     name="description"
                     value={formData.description}
-                    onChange={handleInputChange}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     rows={4}
-                    className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent text-white placeholder-gray-400"
-                    placeholder="Ej: Sistemas, Contabilidad, Recursos Humanos..."
-                    required
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent resize-none"
+                    placeholder="Describe brevemente el área..."
+                    disabled={saving}
                   />
                 </div>
 
-                {/* NUEVO: Componente de Subida de Imágenes con Supabase */}
-                <SupabaseImageUploader
-                  currentImageUrl={formData.image_url}
-                  onImageUploaded={(url) => setFormData({ ...formData, image_url: url })}
-                  onImageRemoved={() => setFormData({ ...formData, image_url: '' })}
-                  folder="areas"
-                  label="Imagen del Área"
-                  required
-                  maxSizeMB={5}
-                />
+                {/* Imagen */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4 text-gray-500" />
+                    Imagen del Área
+                  </label>
 
-                <div className="flex space-x-3 pt-4">
+                  {/* Preview de imagen actual */}
+                  {formData.image_url && (
+                    <div className="mb-3 relative">
+                      <img
+                        src={formData.image_url}
+                        alt="Preview"
+                        className="w-full h-48 object-cover rounded-lg border border-gray-200"
+                        onError={(e) => {
+                          e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Error+al+cargar';
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, image_url: '' })}
+                        className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors shadow-lg"
+                        title="Quitar imagen"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Uploader */}
+                  <SupabaseImageUploader
+                    onImageUpload={handleImageUpload}
+                    currentImageUrl={formData.image_url}
+                    bucketName="area-images"
+                  />
+                </div>
+
+                {/* Mensajes de error/éxito en el modal */}
+                {error && (
+                  <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                    {error}
+                  </div>
+                )}
+
+                {success && (
+                  <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
+                    {success}
+                  </div>
+                )}
+
+                {/* Botones */}
+                <div className="flex gap-3 pt-4 border-t border-gray-200">
                   <button
                     type="button"
                     onClick={handleCloseModal}
-                    className="flex-1 bg-gray-700 text-white px-4 py-3 rounded-lg hover:bg-gray-600 transition-colors font-medium"
+                    disabled={saving}
+                    className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 font-medium"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 bg-yellow-500 text-black px-4 py-3 rounded-lg hover:bg-yellow-400 transition-colors font-medium"
+                    disabled={saving}
+                    className="flex-1 px-4 py-3 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white rounded-lg hover:from-yellow-600 hover:to-yellow-700 transition-all shadow-md disabled:opacity-50 flex items-center justify-center gap-2 font-medium"
                   >
-                    {editingArea ? 'Actualizar' : 'Crear'} Área
+                    {saving ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                        Guardando...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-5 h-5" />
+                        {modalMode === 'create' ? 'Crear Área' : 'Guardar Cambios'}
+                      </>
+                    )}
                   </button>
                 </div>
               </form>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

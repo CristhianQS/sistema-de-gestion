@@ -1,8 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { supabase } from '../lib/supabase';
-import type { Area, DataAlumno } from '../types';
-import { chatbotConfig, getMensaje } from '../config/chatbotPrompts';
+import type { Area, DataAlumno } from '../../../types';
+import { chatbotConfig, getMensaje, actualizarConfig } from '../config/chatbotPrompts';
 import * as OpenAIService from '../services/openai.service';
+import { getAllAreas } from '../../../services/database/areas.service';
+import { getAllPabellones, getSalonesByPabellon } from '../../../services/database/pabellones.service';
+import { getStudentByCode } from '../../../services/database/students.service';
+import { createSubmission } from '../../../services/database/submissions.service';
+import { loadChatbotConfig } from '../../../services/database/chatbot-config.service';
 
 interface Message {
   id: string;
@@ -12,11 +16,13 @@ interface Message {
 }
 
 interface ConversationState {
-  step: 'greeting' | 'waiting_code' | 'waiting_problem' | 'waiting_area' | 'waiting_description' | 'waiting_location' | 'waiting_confirmation' | 'completed';
+  step: 'greeting' | 'waiting_code' | 'waiting_problem' | 'waiting_area' | 'waiting_pabellon' | 'waiting_salon' | 'waiting_description' | 'waiting_location' | 'waiting_confirmation' | 'completed';
   alumno: DataAlumno | null;
   selectedArea: Area | null;
   description: string;
   location: string;
+  selectedPabellon?: any;
+  selectedSalon?: any;
   problemaDetectado?: any;
 }
 
@@ -33,14 +39,48 @@ const ChatbotAsistente: React.FC = () => {
     location: ''
   });
   const [areas, setAreas] = useState<Area[]>([]);
+  const [pabellones, setPabellones] = useState<any[]>([]);
+  const [salones, setSalones] = useState<any[]>([]);
   const [aiEnabled, setAiEnabled] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadAreas();
+    loadPabellones();
+    loadCustomConfig();
     // Verificar si OpenAI está configurado
     setAiEnabled(OpenAIService.isOpenAIEnabled());
   }, []);
+
+  const loadCustomConfig = async () => {
+    try {
+      const configGuardada = await loadChatbotConfig();
+      if (configGuardada) {
+        // Merge con la configuración actual para preservar las funciones
+        const configMerged = {
+          ...chatbotConfig,
+          mensajes: {
+            ...chatbotConfig.mensajes,
+            ...configGuardada.mensajes
+          },
+          solicitudes: {
+            ...chatbotConfig.solicitudes,
+            ...configGuardada.solicitudes
+          },
+          confirmaciones: {
+            ...chatbotConfig.confirmaciones,
+            ...configGuardada.confirmaciones
+          },
+          validacion: configGuardada.validacion || chatbotConfig.validacion,
+          sistemPrompts: configGuardada.sistemPrompts || chatbotConfig.sistemPrompts
+        };
+        actualizarConfig(configMerged);
+        console.log('✅ Chatbot usando configuración personalizada');
+      }
+    } catch (error) {
+      console.error('Error al cargar configuración personalizada:', error);
+    }
+  };
 
   useEffect(() => {
     scrollToBottom();
@@ -55,15 +95,28 @@ const ChatbotAsistente: React.FC = () => {
 
   const loadAreas = async () => {
     try {
-      const { data, error } = await supabase
-        .from('areas')
-        .select('*')
-        .order('name', { ascending: true });
-
-      if (error) throw error;
-      setAreas(data || []);
+      const data = await getAllAreas();
+      setAreas(data);
     } catch (error) {
       console.error('Error al cargar áreas:', error);
+    }
+  };
+
+  const loadPabellones = async () => {
+    try {
+      const data = await getAllPabellones();
+      setPabellones(data);
+    } catch (error) {
+      console.error('Error al cargar pabellones:', error);
+    }
+  };
+
+  const loadSalonesByPabellon = async (pabellonId: number) => {
+    try {
+      const data = await getSalonesByPabellon(pabellonId);
+      setSalones(data);
+    } catch (error) {
+      console.error('Error al cargar salones:', error);
     }
   };
 
@@ -96,26 +149,16 @@ const ChatbotAsistente: React.FC = () => {
         return null;
       }
 
-      const { data, error } = await supabase
-        .from('data_alumnos')
-        .select('*')
-        .eq('codigo', codigoNumero)
-        .single();
-
-      if (error) {
-        console.error('Error al buscar alumno:', error);
-        return null;
-      }
-
-      return data;
+      const alumno = await getStudentByCode(codigoNumero.toString());
+      return alumno;
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error al buscar alumno:', error);
       return null;
     }
   };
 
   const crearReporte = async () => {
-    const { alumno, selectedArea, description, location, problemaDetectado } = conversationState;
+    const { alumno, selectedArea, description, location, problemaDetectado, selectedPabellon, selectedSalon } = conversationState;
 
     if (!alumno || !selectedArea) {
       addBotMessage('Error: Faltan datos para crear el reporte.');
@@ -132,6 +175,10 @@ const ChatbotAsistente: React.FC = () => {
         form_data: {
           descripcion: description,
           ubicacion: location,
+          pabellon_id: selectedPabellon?.id,
+          pabellon_nombre: selectedPabellon?.nombre,
+          salon_id: selectedSalon?.id,
+          salon_nombre: selectedSalon?.nombre,
           created_by: 'ia_chatbot',
           ia_metadata: {
             timestamp: new Date().toISOString(),
@@ -145,17 +192,10 @@ const ChatbotAsistente: React.FC = () => {
             deteccion_automatica: !!problemaDetectado
           }
         },
-        status: 'pending',
-        created_by: 'ia_chatbot'
+        status: 'pending' as const
       };
 
-      const { data, error } = await supabase
-        .from('area_submissions')
-        .insert([reporteData])
-        .select()
-        .single();
-
-      if (error) throw error;
+      const data = await createSubmission(reporteData);
 
       addBotMessage(chatbotConfig.confirmaciones.reporteCreado(data.id, selectedArea.name));
 
@@ -189,6 +229,14 @@ const ChatbotAsistente: React.FC = () => {
 
       case 'waiting_problem':
         await handleProblema(userMessage);
+        break;
+
+      case 'waiting_pabellon':
+        await handlePabellon(userMessage);
+        break;
+
+      case 'waiting_salon':
+        await handleSalon(userMessage);
         break;
 
       case 'waiting_area':
@@ -291,12 +339,12 @@ const ChatbotAsistente: React.FC = () => {
 
         setIsTyping(false);
 
+        // Ahora pedir pabellón
         setConversationState({
           ...conversationState,
-          step: 'waiting_confirmation',
+          step: 'waiting_pabellon',
           selectedArea: areaDetectada.area,
           description: informacion.descripcion,
-          location: informacion.ubicacion || '',
           problemaDetectado: {
             ...informacion,
             confianza: areaDetectada.confianza,
@@ -304,22 +352,17 @@ const ChatbotAsistente: React.FC = () => {
           }
         });
 
-        // Mostrar resumen y pedir confirmación
-        let mensaje = `Entiendo. Detecto que es un problema de **${areaDetectada.area.name}**.\n\n`;
-        mensaje += `📝 **Descripción:** ${informacion.descripcion}\n`;
+        // Mostrar pabellones disponibles
+        const pabellonesTexto = pabellones.map((pab, index) =>
+          `${index + 1}. ${pab.nombre}`
+        ).join('\n');
 
-        if (informacion.ubicacion) {
-          mensaje += `📍 **Ubicación:** ${informacion.ubicacion}\n`;
-        } else {
-          mensaje += `📍 **Ubicación:** No especificada\n`;
-        }
-
-        mensaje += `⚡ **Urgencia:** ${informacion.urgencia.toUpperCase()}\n\n`;
-        mensaje += `¿Es correcta esta información? Responde:\n`;
-        mensaje += `• "Sí" para registrar el reporte\n`;
-        mensaje += `• "No" para corregir algo`;
-
-        addBotMessage(mensaje);
+        addBotMessage(
+          `Entiendo. Detecto que es un problema de **${areaDetectada.area.name}**.\n\n` +
+          `📝 ${informacion.descripcion}\n\n` +
+          `Ahora, ¿en qué pabellón se encuentra el problema?\n\n${pabellonesTexto}\n\n` +
+          `Escribe el número del pabellón.`
+        );
       } else {
         // No se pudo detectar con confianza
         setIsTyping(false);
@@ -353,6 +396,87 @@ const ChatbotAsistente: React.FC = () => {
 
       addBotMessage(`Entiendo. ¿En qué área necesitas ayuda?\n\n${areasTexto}\n\nEscribe el número del área.`);
     }
+  };
+
+  const handlePabellon = async (respuesta: string) => {
+    const numeroPabellon = parseInt(respuesta);
+
+    if (isNaN(numeroPabellon) || numeroPabellon < 1 || numeroPabellon > pabellones.length) {
+      addBotMessage(`Por favor, elige un número entre 1 y ${pabellones.length}.`);
+      return;
+    }
+
+    const pabellonSeleccionado = pabellones[numeroPabellon - 1];
+
+    // Cargar salones del pabellón
+    setIsTyping(true);
+    try {
+      const salonesDelPabellon = await getSalonesByPabellon(pabellonSeleccionado.id);
+      setSalones(salonesDelPabellon);
+
+      setIsTyping(false);
+
+      if (salonesDelPabellon.length === 0) {
+        addBotMessage(
+          `Pabellón **${pabellonSeleccionado.nombre}** seleccionado.\n\n` +
+          `No hay salones registrados para este pabellón. Por favor, vuelve a intentarlo o contacta con soporte.`
+        );
+        return;
+      }
+
+      setConversationState({
+        ...conversationState,
+        step: 'waiting_salon',
+        selectedPabellon: pabellonSeleccionado
+      });
+
+      // Mostrar salones disponibles
+      const salonesTexto = salonesDelPabellon.map((salon, index) =>
+        `${index + 1}. ${salon.nombre}`
+      ).join('\n');
+
+      addBotMessage(
+        `Pabellón **${pabellonSeleccionado.nombre}** seleccionado.\n\n` +
+        `¿En qué salón específicamente?\n\n${salonesTexto}\n\n` +
+        `Escribe el número del salón.`
+      );
+    } catch (error) {
+      console.error('Error al cargar salones:', error);
+      setIsTyping(false);
+      addBotMessage('Ocurrió un error al cargar los salones. Por favor, intenta nuevamente.');
+    }
+  };
+
+  const handleSalon = async (respuesta: string) => {
+    const numeroSalon = parseInt(respuesta);
+
+    if (isNaN(numeroSalon) || numeroSalon < 1 || numeroSalon > salones.length) {
+      addBotMessage(`Por favor, elige un número entre 1 y ${salones.length}.`);
+      return;
+    }
+
+    const salonSeleccionado = salones[numeroSalon - 1];
+
+    setConversationState({
+      ...conversationState,
+      step: 'waiting_confirmation',
+      selectedSalon: salonSeleccionado,
+      location: `${conversationState.selectedPabellon?.nombre} - ${salonSeleccionado.nombre}`
+    });
+
+    // Mostrar resumen completo y pedir confirmación
+    const { selectedArea, description, selectedPabellon, problemaDetectado } = conversationState;
+
+    let mensaje = `Perfecto, aquí está el resumen de tu reporte:\n\n`;
+    mensaje += `🏢 **Área:** ${selectedArea?.name}\n`;
+    mensaje += `📝 **Descripción:** ${description}\n`;
+    mensaje += `📍 **Ubicación:** ${selectedPabellon?.nombre} - ${salonSeleccionado.nombre}\n`;
+    mensaje += `⚡ **Urgencia:** ${problemaDetectado?.urgencia?.toUpperCase() || 'MEDIA'}\n\n`;
+    mensaje += `¿Deseas registrar este reporte?\n`;
+    mensaje += `• Responde "Sí" para confirmar\n`;
+    mensaje += `• Responde "No" para cancelar`;
+
+    addBotMessage(mensaje);
   };
 
   const handleConfirmacion = async (respuesta: string) => {

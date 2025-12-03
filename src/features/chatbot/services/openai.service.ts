@@ -7,7 +7,7 @@
 
 import OpenAI from 'openai';
 import { chatbotConfig } from '../config/chatbotPrompts';
-import type { Area } from '../types';
+import type { Area } from '../../../types';
 
 // Inicializar cliente de OpenAI
 const openai = new OpenAI({
