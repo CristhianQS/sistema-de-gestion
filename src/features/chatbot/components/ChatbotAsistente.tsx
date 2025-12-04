@@ -7,6 +7,8 @@ import { getAllPabellones, getSalonesByPabellon } from '../../../services/databa
 import { getStudentByCode } from '../../../services/database/students.service';
 import { createSubmission } from '../../../services/database/submissions.service';
 import { loadChatbotConfig } from '../../../services/database/chatbot-config.service';
+import SupabaseImageUploader from '../../../components/SupabaseImageUploader';
+import { supabase } from '../../../lib/supabase';
 
 interface Message {
   id: string;
@@ -16,7 +18,7 @@ interface Message {
 }
 
 interface ConversationState {
-  step: 'greeting' | 'waiting_code' | 'waiting_problem' | 'waiting_area' | 'waiting_pabellon' | 'waiting_salon' | 'waiting_description' | 'waiting_location' | 'waiting_confirmation' | 'completed';
+  step: 'greeting' | 'waiting_code' | 'waiting_problem' | 'waiting_area' | 'waiting_pabellon' | 'waiting_salon' | 'waiting_description' | 'waiting_images' | 'waiting_location' | 'waiting_confirmation' | 'completed';
   alumno: DataAlumno | null;
   selectedArea: Area | null;
   description: string;
@@ -24,6 +26,8 @@ interface ConversationState {
   selectedPabellon?: any;
   selectedSalon?: any;
   problemaDetectado?: any;
+  imageFields?: any[];
+  uploadedImages?: Record<string, string>;
 }
 
 const ChatbotAsistente: React.FC = () => {
@@ -42,6 +46,8 @@ const ChatbotAsistente: React.FC = () => {
   const [pabellones, setPabellones] = useState<any[]>([]);
   const [salones, setSalones] = useState<any[]>([]);
   const [aiEnabled, setAiEnabled] = useState(false);
+  const [imageFields, setImageFields] = useState<any[]>([]);
+  const [currentImageFieldIndex, setCurrentImageFieldIndex] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -120,6 +126,26 @@ const ChatbotAsistente: React.FC = () => {
     }
   };
 
+  const loadAreaFields = async (areaId: number) => {
+    try {
+      const { data, error } = await supabase
+        .from('area_fields')
+        .select('*')
+        .eq('area_id', areaId)
+        .eq('field_type', 'image')
+        .order('order_index', { ascending: true });
+
+      if (!error && data) {
+        setImageFields(data);
+        return data;
+      }
+      return [];
+    } catch (error) {
+      console.error('Error al cargar campos de imagen:', error);
+      return [];
+    }
+  };
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -175,6 +201,7 @@ const ChatbotAsistente: React.FC = () => {
         form_data: {
           descripcion: description,
           ubicacion: location,
+          ...conversationState.uploadedImages,
           pabellon_id: selectedPabellon?.id,
           pabellon_nombre: selectedPabellon?.nombre,
           salon_id: selectedSalon?.id,
@@ -337,6 +364,9 @@ const ChatbotAsistente: React.FC = () => {
         // Extraer información completa
         const informacion = await OpenAIService.extraerInformacionCompleta(problema, areaDetectada.area);
 
+        // Cargar campos de imagen del área
+        const camposImagen = await loadAreaFields(areaDetectada.area.id);
+
         setIsTyping(false);
 
         // Ahora pedir pabellón
@@ -349,7 +379,9 @@ const ChatbotAsistente: React.FC = () => {
             ...informacion,
             confianza: areaDetectada.confianza,
             mensajeOriginal: problema
-          }
+          },
+          imageFields: camposImagen,
+          uploadedImages: {}
         });
 
         // Mostrar pabellones disponibles
@@ -457,6 +489,27 @@ const ChatbotAsistente: React.FC = () => {
 
     const salonSeleccionado = salones[numeroSalon - 1];
 
+    // Verificar si hay campos de imagen
+    if (conversationState.imageFields && conversationState.imageFields.length > 0) {
+      setConversationState({
+        ...conversationState,
+        step: 'waiting_images',
+        selectedSalon: salonSeleccionado,
+        location: `${conversationState.selectedPabellon?.nombre} - ${salonSeleccionado.nombre}`
+      });
+
+      // Resetear índice de campo actual
+      setCurrentImageFieldIndex(0);
+
+      const primerCampo = conversationState.imageFields[0];
+      addBotMessage(
+        `Salón **${salonSeleccionado.nombre}** seleccionado.\n\n` +
+        `Por favor, sube una imagen para: **${primerCampo.field_label}**\n\n` +
+        `${primerCampo.is_required ? '⚠️ Este campo es obligatorio' : 'Opcional: Puedes omitir este campo si no tienes una imagen'}`
+      );
+      return;
+    }
+
     setConversationState({
       ...conversationState,
       step: 'waiting_confirmation',
@@ -523,10 +576,15 @@ const ChatbotAsistente: React.FC = () => {
 
     const areaSeleccionada = areas[numeroArea - 1];
 
+    // Cargar campos de imagen del área
+    const camposImagen = await loadAreaFields(areaSeleccionada.id);
+
     setConversationState({
       ...conversationState,
       step: 'waiting_description',
-      selectedArea: areaSeleccionada
+      selectedArea: areaSeleccionada,
+      imageFields: camposImagen,
+      uploadedImages: {}
     });
 
     if (aiEnabled) {
@@ -583,18 +641,78 @@ const ChatbotAsistente: React.FC = () => {
           return;
         }
 
-        // Si no encontró ubicación, solicitarla
-        setConversationState({
-          ...conversationState,
-          step: 'waiting_location',
-          description: descripcionMejorada || descripcion
-        });
+        // Si no encontró ubicación, verificar si hay imágenes
+        const hasImages = conversationState.imageFields && conversationState.imageFields.length > 0;
 
-        addBotMessage(chatbotConfig.solicitudes.ubicacion);
+        if (hasImages) {
+          setConversationState({
+            ...conversationState,
+            step: 'waiting_images',
+            description: descripcionMejorada || descripcion
+          });
+
+          setCurrentImageFieldIndex(0);
+          const primerCampo = conversationState.imageFields![0];
+          addBotMessage(
+            `Perfecto. Ahora, por favor sube una imagen para: **${primerCampo.field_label}**\n\n` +
+            `${primerCampo.is_required ? '⚠️ Este campo es obligatorio' : 'Opcional: Puedes omitir este campo si no tienes una imagen'}`
+          );
+        } else {
+          setConversationState({
+            ...conversationState,
+            step: 'waiting_location',
+            description: descripcionMejorada || descripcion
+          });
+
+          addBotMessage(chatbotConfig.solicitudes.ubicacion);
+        }
       } catch (error) {
         console.error('Error con OpenAI:', error);
         setIsTyping(false);
-        // Continuar con flujo normal
+        // Continuar con flujo normal, verificar si hay imágenes
+        const hasImages = conversationState.imageFields && conversationState.imageFields.length > 0;
+
+        if (hasImages) {
+          setConversationState({
+            ...conversationState,
+            step: 'waiting_images',
+            description: descripcion
+          });
+
+          setCurrentImageFieldIndex(0);
+          const primerCampo = conversationState.imageFields![0];
+          addBotMessage(
+            `Perfecto. Ahora, por favor sube una imagen para: **${primerCampo.field_label}**\n\n` +
+            `${primerCampo.is_required ? '⚠️ Este campo es obligatorio' : 'Opcional: Puedes omitir este campo si no tienes una imagen'}`
+          );
+        } else {
+          setConversationState({
+            ...conversationState,
+            step: 'waiting_location',
+            description: descripcion
+          });
+
+          addBotMessage(chatbotConfig.solicitudes.ubicacion);
+        }
+      }
+    } else {
+      // Flujo sin IA, verificar si hay imágenes
+      const hasImages = conversationState.imageFields && conversationState.imageFields.length > 0;
+
+      if (hasImages) {
+        setConversationState({
+          ...conversationState,
+          step: 'waiting_images',
+          description: descripcion
+        });
+
+        setCurrentImageFieldIndex(0);
+        const primerCampo = conversationState.imageFields![0];
+        addBotMessage(
+          `Perfecto. Ahora, por favor sube una imagen para: **${primerCampo.field_label}**\n\n` +
+          `${primerCampo.is_required ? '⚠️ Este campo es obligatorio' : 'Opcional: Puedes omitir este campo si no tienes una imagen'}`
+        );
+      } else {
         setConversationState({
           ...conversationState,
           step: 'waiting_location',
@@ -603,15 +721,6 @@ const ChatbotAsistente: React.FC = () => {
 
         addBotMessage(chatbotConfig.solicitudes.ubicacion);
       }
-    } else {
-      // Flujo sin IA
-      setConversationState({
-        ...conversationState,
-        step: 'waiting_location',
-        description: descripcion
-      });
-
-      addBotMessage(chatbotConfig.solicitudes.ubicacion);
     }
   };
 
@@ -641,6 +750,71 @@ const ChatbotAsistente: React.FC = () => {
     await crearReporte();
   };
 
+  const handleImageUpload = (url: string) => {
+    if (!imageFields || imageFields.length === 0) return;
+
+    const currentField = imageFields[currentImageFieldIndex];
+
+    const newUploadedImages = {
+      ...conversationState.uploadedImages,
+      [currentField.field_name]: url
+    };
+
+    if (currentImageFieldIndex < imageFields.length - 1) {
+      // Hay más campos de imagen
+      setCurrentImageFieldIndex(currentImageFieldIndex + 1);
+      const nextField = imageFields[currentImageFieldIndex + 1];
+
+      setConversationState({
+        ...conversationState,
+        uploadedImages: newUploadedImages
+      });
+
+      addBotMessage(
+        `✅ Imagen recibida.\n\n` +
+        `Ahora sube una imagen para: **${nextField.field_label}**\n\n` +
+        `${nextField.is_required ? '⚠️ Este campo es obligatorio' : 'Opcional: Puedes omitir este campo si no tienes una imagen'}`
+      );
+    } else {
+      // Ya terminamos con las imágenes
+      const { selectedSalon, selectedPabellon } = conversationState;
+
+      // Si tenemos pabellón y salón, ir a confirmación
+      // Si no, ir a solicitar ubicación
+      if (selectedSalon && selectedPabellon) {
+        setConversationState({
+          ...conversationState,
+          uploadedImages: newUploadedImages,
+          step: 'waiting_confirmation'
+        });
+
+        const { selectedArea, description, problemaDetectado } = conversationState;
+
+        let mensaje = `✅ Todas las imágenes recibidas.\n\nPerfecto, aquí está el resumen de tu reporte:\n\n`;
+        mensaje += `🏢 **Área:** ${selectedArea?.name}\n`;
+        mensaje += `📝 **Descripción:** ${description}\n`;
+        mensaje += `📍 **Ubicación:** ${selectedPabellon.nombre} - ${selectedSalon.nombre}\n`;
+        mensaje += `⚡ **Urgencia:** ${problemaDetectado?.urgencia?.toUpperCase() || 'MEDIA'}\n\n`;
+        mensaje += `¿Deseas registrar este reporte?\n`;
+        mensaje += `• Responde "Sí" para confirmar\n`;
+        mensaje += `• Responde "No" para cancelar`;
+
+        addBotMessage(mensaje);
+      } else {
+        setConversationState({
+          ...conversationState,
+          uploadedImages: newUploadedImages,
+          step: 'waiting_location'
+        });
+
+        addBotMessage(
+          `✅ Todas las imágenes recibidas.\n\n` +
+          chatbotConfig.solicitudes.ubicacion
+        );
+      }
+    }
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -665,7 +839,7 @@ const ChatbotAsistente: React.FC = () => {
 
       {/* Ventana del chat */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 z-50 w-96 h-[600px] bg-white rounded-xl shadow-2xl flex flex-col overflow-hidden border border-gray-200">
+        <div className="fixed bottom-6 right-6 top-[5vh] z-50 w-96 bg-white rounded-xl shadow-2xl flex flex-col overflow-hidden border border-gray-200">
           {/* Header verde delgado */}
           <div className="h-2 bg-gradient-to-r from-green-600 to-green-500"></div>
 
@@ -707,7 +881,7 @@ const ChatbotAsistente: React.FC = () => {
                 className={`mb-4 flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[80%] px-4 py-2 rounded-lg ${
+                  className={`max-w-[75%] px-3 py-2 rounded-lg ${
                     message.type === 'user'
                       ? 'bg-gradient-to-br from-green-500 to-green-600 text-white rounded-tr-none'
                       : 'bg-white text-gray-800 rounded-tl-none shadow-md border border-gray-200'
@@ -737,27 +911,49 @@ const ChatbotAsistente: React.FC = () => {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input */}
+          {/* Input o Uploader */}
           <div className="p-4 bg-white border-t border-gray-200">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Escribe tu mensaje..."
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all"
-              />
-              <button
-                onClick={handleSend}
-                disabled={!inputValue.trim()}
-                className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 text-white rounded-full hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                </svg>
-              </button>
-            </div>
+            {conversationState.step === 'waiting_images' && imageFields.length > 0 ? (
+              <div className="space-y-2">
+                <SupabaseImageUploader
+                  currentImageUrl=""
+                  onImageUploaded={handleImageUpload}
+                  onImageRemoved={() => {}}
+                  folder="chatbot-reportes"
+                  label=""
+                  required={imageFields[currentImageFieldIndex]?.is_required}
+                  maxSizeMB={5}
+                />
+                {!imageFields[currentImageFieldIndex]?.is_required && (
+                  <button
+                    onClick={() => handleImageUpload('')}
+                    className="w-full text-sm text-gray-600 hover:text-gray-800 py-2"
+                  >
+                    Omitir este campo
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Escribe tu mensaje..."
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all"
+                />
+                <button
+                  onClick={handleSend}
+                  disabled={!inputValue.trim()}
+                  className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 text-white rounded-full hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

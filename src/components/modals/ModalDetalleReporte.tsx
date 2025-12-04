@@ -11,7 +11,6 @@ interface Reporte {
   submitted_at: string;
   status: 'pending' | 'in_progress' | 'resolved';
   area_nombre?: string;
-  estimated_time?: string;
 }
 
 interface Props {
@@ -208,7 +207,7 @@ const ModalDetalleReporte: React.FC<Props> = ({ isOpen, onClose, reporte, onUpda
           </div>
 
           {/* Tiempo Estimado */}
-          {reporte.status === 'in_progress' && reporte.estimated_time && (
+          {reporte.status === 'in_progress' && reporte.form_data?.estimated_time && (
             <div className="bg-green-50 rounded-lg p-4 mb-6 border-2 border-green-200">
               <h4 className="font-bold text-gray-800 mb-3 flex items-center">
                 <svg className="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -218,7 +217,7 @@ const ModalDetalleReporte: React.FC<Props> = ({ isOpen, onClose, reporte, onUpda
               </h4>
               <div className="bg-white rounded-lg p-3 inline-block">
                 <p className="text-lg font-bold text-green-700">
-                  {timeOptions.find(opt => opt.value === reporte.estimated_time)?.label || reporte.estimated_time}
+                  {timeOptions.find(opt => opt.value === reporte.form_data.estimated_time)?.label || reporte.form_data.estimated_time}
                 </p>
               </div>
             </div>

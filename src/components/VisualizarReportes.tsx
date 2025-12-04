@@ -14,7 +14,6 @@ interface Reporte {
   submitted_at: string;
   status: 'pending' | 'in_progress' | 'resolved';
   area_nombre?: string;
-  estimated_time?: string;
 }
 
 interface Area {
@@ -69,15 +68,28 @@ const VisualizarReportes: React.FC = () => {
 
   const handleUpdateStatus = async (reporteId: number, newStatus: string, estimatedTime?: string) => {
     try {
+      // Obtener el reporte actual para acceder a form_data
+      const { data: currentReport, error: fetchError } = await supabase
+        .from('area_submissions')
+        .select('form_data')
+        .eq('id', reporteId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
       const updateData: any = { status: newStatus };
 
+      // Actualizar form_data con el tiempo estimado
+      const updatedFormData = { ...currentReport.form_data };
+
       if (newStatus === 'in_progress' && estimatedTime) {
-        updateData.estimated_time = estimatedTime;
+        updatedFormData.estimated_time = estimatedTime;
+      } else if (newStatus !== 'in_progress') {
+        // Remover estimated_time si no está en progreso
+        delete updatedFormData.estimated_time;
       }
 
-      if (newStatus !== 'in_progress') {
-        updateData.estimated_time = null;
-      }
+      updateData.form_data = updatedFormData;
 
       const { error } = await supabase
         .from('area_submissions')
@@ -362,10 +374,10 @@ const VisualizarReportes: React.FC = () => {
                         </p>
                       )}
 
-                      {reporte.estimated_time && (
+                      {reporte.form_data?.estimated_time && (
                         <div className="mt-2 inline-flex items-center gap-2 text-sm text-indigo-700 bg-indigo-50 px-3 py-1 rounded-full border border-indigo-200">
                           <Clock className="w-4 h-4" />
-                          Tiempo estimado: {reporte.estimated_time}
+                          Tiempo estimado: {reporte.form_data.estimated_time}
                         </div>
                       )}
                     </div>
@@ -384,7 +396,12 @@ const VisualizarReportes: React.FC = () => {
                             const newStatus = e.target.value;
                             if (newStatus === 'in_progress') {
                               const time = prompt('Ingresa el tiempo estimado (ej: 2 horas, 1 día):');
-                              handleUpdateStatus(reporte.id, newStatus, time || undefined);
+                              if (time !== null) {
+                                handleUpdateStatus(reporte.id, newStatus, time || undefined);
+                              } else {
+                                // Revertir el select si se canceló
+                                e.target.value = reporte.status;
+                              }
                             } else {
                               handleUpdateStatus(reporte.id, newStatus);
                             }
@@ -433,8 +450,7 @@ const VisualizarReportes: React.FC = () => {
             setSelectedReporte(null);
           }}
           reporte={selectedReporte}
-          onStatusUpdate={handleUpdateStatus}
-          onReload={loadReportes}
+          onUpdateStatus={handleUpdateStatus}
         />
       )}
     </div>
