@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { getAreaById } from '../services/database/areas.service';
-import { getSubmissionsByArea } from '../services/database/submissions.service';
-import { getAllStudents } from '../services/database/students.service';
+import { getAllSubmissionsUnpaginated } from '../services/database/submissions.service';
+import { getAllStudentsUnpaginated } from '../services/database/students.service';
 import type { Area, AreaSubmission, DataAlumno } from '../lib/supabase';
 
 type ViewMode = 'dashboard' | 'area' | 'reportes' | 'estudiantes';
@@ -38,8 +38,11 @@ const VistaPlata: React.FC = () => {
 
     setLoading(true);
     try {
-      const data = await getSubmissionsByArea(user.area_id);
-      setReportes(data);
+      // Por ahora cargamos todos y filtramos localmente
+      // TODO: Migrar a versión paginada con hooks
+      const allData = await getAllSubmissionsUnpaginated();
+      const filteredData = allData.filter(r => r.area_id === user.area_id);
+      setReportes(filteredData);
     } catch (error) {
       console.error('Error al cargar reportes:', error);
     } finally {
@@ -50,7 +53,7 @@ const VistaPlata: React.FC = () => {
   const loadEstudiantes = async () => {
     setLoading(true);
     try {
-      const data = await getAllStudents();
+      const data = await getAllStudentsUnpaginated();
       setEstudiantes(data);
     } catch (error) {
       console.error('Error al cargar estudiantes:', error);
@@ -201,12 +204,12 @@ const VistaPlata: React.FC = () => {
                       <div className="flex items-center gap-2 mb-2">
                         <h3 className="text-lg font-bold text-gray-800">Ticket #{reporte.id}</h3>
                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          reporte.status === 'completed' ? 'bg-green-100 text-green-700' :
-                          reporte.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
+                          reporte.status === 'approved' ? 'bg-green-100 text-green-700' :
+                          reporte.status === 'rejected' ? 'bg-red-100 text-red-700' :
                           'bg-yellow-100 text-yellow-700'
                         }`}>
-                          {reporte.status === 'completed' ? 'Completado' :
-                           reporte.status === 'in_progress' ? 'En Progreso' : 'Pendiente'}
+                          {reporte.status === 'approved' ? 'Aprobado' :
+                           reporte.status === 'rejected' ? 'Rechazado' : 'Pendiente'}
                         </span>
                         {reporte.form_data?.ia_metadata?.ia_enabled && (
                           <span className="px-2 py-0.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full text-xs font-bold">

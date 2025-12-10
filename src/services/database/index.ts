@@ -17,3 +17,7 @@ export * from './pabellones.service';
 
 // Servicios de Autenticación
 export * from './auth.service';
+
+// NOTA: Por defecto, las funciones principales (getAllAreas, getAllSubmissions, getAllStudents)
+// ahora retornan resultados paginados. Para obtener datos sin paginación (compatibilidad con código antiguo),
+// usar las versiones *Unpaginated: getAllAreasUnpaginated(), etc.

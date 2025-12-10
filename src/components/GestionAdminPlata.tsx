@@ -7,7 +7,7 @@ import {
   emailExists,
   type Admin
 } from '../services/database/auth.service';
-import { getAllAreas } from '../services/database/areas.service';
+import { getAllAreasUnpaginated } from '../services/database/areas.service';
 import type { Area } from '../lib/supabase';
 import { UserPlus, Edit2, Trash2, X, Save, Shield, Mail, Lock, User, MapPin } from 'lucide-react';
 
@@ -45,7 +45,7 @@ const GestionAdminPlata: React.FC = () => {
     try {
       const [allAdmins, allAreas] = await Promise.all([
         getAllAdmins(),
-        getAllAreas()
+        getAllAreasUnpaginated()
       ]);
 
       // Filtrar solo Admin Plata

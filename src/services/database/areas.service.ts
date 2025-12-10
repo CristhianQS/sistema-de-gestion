@@ -1,5 +1,7 @@
 import { supabase } from '../../lib/supabase';
 import type { Area } from '../../lib/supabase';
+import type { PaginationParams, PaginationResult } from '../../types/pagination';
+import { toPaginationRange, createPaginationResult, DEFAULT_PAGE_SIZE } from '../../types/pagination';
 
 /**
  * Servicio de acceso a datos para Áreas
@@ -7,9 +9,44 @@ import type { Area } from '../../lib/supabase';
  */
 
 /**
- * Obtener todas las áreas ordenadas por nombre
+ * Obtener todas las áreas ordenadas por nombre - PAGINADO
  */
-export async function getAllAreas(): Promise<Area[]> {
+export async function getAllAreas(
+  params?: Partial<PaginationParams>
+): Promise<PaginationResult<Area>> {
+  const { page = 1, pageSize = DEFAULT_PAGE_SIZE } = params || {};
+  const { from, to } = toPaginationRange({ page, pageSize });
+
+  // Obtener el conteo total
+  const { count, error: countError } = await supabase
+    .from('areas')
+    .select('*', { count: 'exact', head: true });
+
+  if (countError) {
+    console.error('Error al contar áreas:', countError);
+    throw countError;
+  }
+
+  // Obtener los datos paginados
+  const { data, error } = await supabase
+    .from('areas')
+    .select('*')
+    .order('name', { ascending: true })
+    .range(from, to);
+
+  if (error) {
+    console.error('Error al obtener áreas:', error);
+    throw error;
+  }
+
+  return createPaginationResult(data || [], count || 0, { page, pageSize });
+}
+
+/**
+ * Obtener todas las áreas sin paginación - DEPRECADO
+ * @deprecated Usar getAllAreas con parámetros de paginación
+ */
+export async function getAllAreasUnpaginated(): Promise<Area[]> {
   const { data, error } = await supabase
     .from('areas')
     .select('*')
@@ -98,20 +135,39 @@ export async function deleteArea(id: number): Promise<void> {
 }
 
 /**
- * Buscar áreas por palabra clave en nombre o descripción
+ * Buscar áreas por palabra clave en nombre o descripción - PAGINADO
  * Útil para el chatbot con IA
  */
-export async function searchAreasByKeyword(keyword: string): Promise<Area[]> {
+export async function searchAreasByKeyword(
+  keyword: string,
+  params?: Partial<PaginationParams>
+): Promise<PaginationResult<Area>> {
+  const { page = 1, pageSize = DEFAULT_PAGE_SIZE } = params || {};
+  const { from, to } = toPaginationRange({ page, pageSize });
+
+  // Obtener el conteo total
+  const { count, error: countError } = await supabase
+    .from('areas')
+    .select('*', { count: 'exact', head: true })
+    .or(`name.ilike.%${keyword}%,description.ilike.%${keyword}%`);
+
+  if (countError) {
+    console.error('Error al contar áreas en búsqueda:', countError);
+    throw countError;
+  }
+
+  // Obtener los datos paginados
   const { data, error } = await supabase
     .from('areas')
     .select('*')
     .or(`name.ilike.%${keyword}%,description.ilike.%${keyword}%`)
-    .order('name', { ascending: true });
+    .order('name', { ascending: true })
+    .range(from, to);
 
   if (error) {
     console.error('Error al buscar áreas:', error);
     throw error;
   }
 
-  return data || [];
+  return createPaginationResult(data || [], count || 0, { page, pageSize });
 }

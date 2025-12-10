@@ -11,7 +11,21 @@
       "Bash(test:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push)"
+      "Bash(git push)",
+      "Bash(if [ ! -d \"sql\" ])",
+      "Bash(then mkdir sql)",
+      "Bash(fi)",
+      "Bash(if [ -f .env ])",
+      "Bash(then grep \"VITE_OPENAI_API_KEY\" .env)",
+      "Bash(else echo \"No .env file found\")",
+      "Bash(then grep \"VITE_SUPABASE_URL\\|VITE_SUPABASE_ANON_KEY\" .env)",
+      "Bash(node scripts/check-areas.js:*)",
+      "Bash(node scripts/fix-dti-options.js:*)",
+      "Bash(node scripts/check-dti-field-details.js:*)",
+      "Bash(node scripts/check-selection-options.js:*)",
+      "Bash(node scripts/restore-dti-to-default.js:*)",
+      "Bash(node scripts/check-area-structure.js:*)",
+      "Bash(node scripts/check-admins.js:*)"
     ],
     "deny": [],
     "ask": []

@@ -1,5 +1,7 @@
 import { supabase } from '../../lib/supabase';
 import type { DataAlumno } from '../../lib/supabase';
+import type { PaginationParams, PaginationResult } from '../../types/pagination';
+import { toPaginationRange, createPaginationResult, DEFAULT_PAGE_SIZE } from '../../types/pagination';
 
 /**
  * Servicio de acceso a datos para Estudiantes
@@ -7,9 +9,44 @@ import type { DataAlumno } from '../../lib/supabase';
  */
 
 /**
- * Obtener todos los estudiantes
+ * Obtener todos los estudiantes - PAGINADO
  */
-export async function getAllStudents(): Promise<DataAlumno[]> {
+export async function getAllStudents(
+  params?: Partial<PaginationParams>
+): Promise<PaginationResult<DataAlumno>> {
+  const { page = 1, pageSize = DEFAULT_PAGE_SIZE } = params || {};
+  const { from, to } = toPaginationRange({ page, pageSize });
+
+  // Obtener el conteo total
+  const { count, error: countError } = await supabase
+    .from('data_alumnos')
+    .select('*', { count: 'exact', head: true });
+
+  if (countError) {
+    console.error('Error al contar estudiantes:', countError);
+    throw countError;
+  }
+
+  // Obtener los datos paginados
+  const { data, error } = await supabase
+    .from('data_alumnos')
+    .select('*')
+    .order('estudiante', { ascending: true })
+    .range(from, to);
+
+  if (error) {
+    console.error('Error al obtener estudiantes:', error);
+    throw error;
+  }
+
+  return createPaginationResult(data || [], count || 0, { page, pageSize });
+}
+
+/**
+ * Obtener todos los estudiantes sin paginación - DEPRECADO
+ * @deprecated Usar getAllStudents con parámetros de paginación
+ */
+export async function getAllStudentsUnpaginated(): Promise<DataAlumno[]> {
   const { data, error } = await supabase
     .from('data_alumnos')
     .select('*')
@@ -123,21 +160,40 @@ export async function deleteStudent(id: number): Promise<void> {
 }
 
 /**
- * Buscar estudiantes por nombre o código
+ * Buscar estudiantes por nombre o código - PAGINADO
  */
-export async function searchStudents(searchTerm: string): Promise<DataAlumno[]> {
+export async function searchStudents(
+  searchTerm: string,
+  params?: Partial<PaginationParams>
+): Promise<PaginationResult<DataAlumno>> {
+  const { page = 1, pageSize = DEFAULT_PAGE_SIZE } = params || {};
+  const { from, to } = toPaginationRange({ page, pageSize });
+
+  // Obtener el conteo total
+  const { count, error: countError } = await supabase
+    .from('data_alumnos')
+    .select('*', { count: 'exact', head: true })
+    .or(`estudiante.ilike.%${searchTerm}%,codigo.ilike.%${searchTerm}%`);
+
+  if (countError) {
+    console.error('Error al contar estudiantes en búsqueda:', countError);
+    throw countError;
+  }
+
+  // Obtener los datos paginados
   const { data, error } = await supabase
     .from('data_alumnos')
     .select('*')
     .or(`estudiante.ilike.%${searchTerm}%,codigo.ilike.%${searchTerm}%`)
-    .order('estudiante', { ascending: true });
+    .order('estudiante', { ascending: true })
+    .range(from, to);
 
   if (error) {
     console.error('Error al buscar estudiantes:', error);
     throw error;
   }
 
-  return data || [];
+  return createPaginationResult(data || [], count || 0, { page, pageSize });
 }
 
 /**

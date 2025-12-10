@@ -25,6 +25,7 @@ export interface Area {
   name: string;
   description: string | null;
   image_url: string | null;
+  created_at?: string;
 }
 
 export interface AreaField {
@@ -55,6 +56,7 @@ export interface DataAlumno {
   fecha_nacimiento: string | null;
   correo: string | null;
   pais: string | null;
+  created_at?: string;
 }
 
 export interface AreaSubmission {
@@ -64,9 +66,27 @@ export interface AreaSubmission {
   alumno_dni: string;
   alumno_codigo: number;
   alumno_nombre: string;
+  codigo_alumno?: string; // Código del alumno como string
   form_data: any;
   submitted_at: string;
+  created_at: string;
+  updated_at?: string;
   status: 'pending' | 'approved' | 'rejected';
+  // Campos de revisión
+  reviewed?: boolean;
+  reviewed_at?: string | null;
+  reviewed_by?: string | null;
+  // Relaciones con joins
+  area?: {
+    id: number;
+    name: string;
+    description?: string | null;
+  };
+  alumno?: {
+    id: number;
+    codigo: number | null;
+    estudiante: string | null;
+  };
 }
 
 export interface Pabellon {

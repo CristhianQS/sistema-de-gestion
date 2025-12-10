@@ -7,7 +7,7 @@
 
 import OpenAI from 'openai';
 import { chatbotConfig } from '../config/chatbotPrompts';
-import type { Area } from '../../../types';
+import type { Area, AreaField } from '../../../types';
 
 // Inicializar cliente de OpenAI
 const openai = new OpenAI({
@@ -466,34 +466,93 @@ Resumen de 10 palabras:`;
 
 /**
  * Detectar área automáticamente basándose en palabras clave del problema
+ * y los campos personalizados de cada área
  *
  * @param mensajeProblema - Descripción del problema del usuario
  * @param areas - Lista de áreas disponibles
+ * @param areasConCampos - Mapa de campos personalizados por área (opcional)
  * @returns Área detectada o null
  */
 export async function detectarAreaPorPalabrasClave(
   mensajeProblema: string,
-  areas: Area[]
+  areas: Area[],
+  areasConCampos?: Map<number, AreaField[]>
 ): Promise<{ area: Area; confianza: number } | null> {
   try {
-    // Preparar información de áreas para el prompt
+    // Preparar información de áreas para el prompt, incluyendo campos personalizados
     const areasInfo = areas.map((a, i) => {
-      return `${i}. ${a.name}: ${a.description || 'Sin descripción'}`;
-    }).join('\n');
+      let info = `${i}. ${a.name}: ${a.description || 'Sin descripción'}`;
+
+      // Si hay campos personalizados para esta área, incluirlos
+      if (areasConCampos && areasConCampos.has(a.id)) {
+        const campos = areasConCampos.get(a.id)!;
+        // Solo incluir campos tipo SELECT con opciones
+        const camposSelect = campos.filter(c => c.field_type === 'select' && c.options);
+
+        if (camposSelect.length > 0) {
+          info += '\n   Campos SELECT con opciones:';
+          camposSelect.forEach(campo => {
+            info += `\n   - ${campo.field_label}`;
+
+            // Incluir opciones del select
+            try {
+              const options = typeof campo.options === 'string'
+                ? JSON.parse(campo.options)
+                : campo.options;
+
+              if (Array.isArray(options) && options.length > 0) {
+                // Filtrar "default" y opciones vacías
+                const validOptions = options.filter(opt =>
+                  opt &&
+                  opt !== 'default' &&
+                  opt.trim() !== ''
+                );
+
+                if (validOptions.length > 0) {
+                  info += ` → OPCIONES: ${validOptions.join(', ')}`;
+                }
+              }
+            } catch (e) {
+              // Si hay error al parsear, continuar sin opciones
+            }
+          });
+        }
+      }
+
+      return info;
+    }).join('\n\n');
 
     const prompt = `El usuario reportó este problema:
 "${mensajeProblema}"
 
-Áreas disponibles:
+Áreas disponibles con sus campos de formulario:
 ${areasInfo}
 
-Analiza el problema y determina qué área es la más apropiada.
+IMPORTANTE - PRIORIDAD DE DETECCIÓN:
+1. **PRIORIDAD MÁXIMA**: Busca coincidencias con las OPCIONES de campos tipo SELECT
+   - Si encuentras una palabra del problema que coincida EXACTAMENTE con una opción de un campo select, ESA es el área correcta
+   - Ejemplo: Si el usuario dice "cable HDMI" y existe un select con opción "cable HDMI", usa ESA área
+
+2. **PRIORIDAD MEDIA**: La descripción del área
+
+3. **PRIORIDAD BAJA**: Los placeholders (son solo ejemplos, NO son criterios de detección)
+
+REGLAS ESTRICTAS:
+- Las opciones de campos SELECT tienen PRIORIDAD ABSOLUTA sobre cualquier placeholder
+- Si una palabra del problema coincide con una opción de select, ignora los placeholders de otras áreas
+- Los placeholders solo son informativos, NO los uses para detectar el área
+- Busca coincidencias parciales: si el usuario dice "hdmi" y hay opción "cable HDMI", es una coincidencia
+
+Ejemplos:
+- Usuario: "cable hdmi" → Área con select que tiene opción "cable HDMI" (confianza: 95%)
+- Usuario: "proyector" → Área con select que tiene opción "proyector" (confianza: 95%)
+- NO uses placeholders para decidir, solo las opciones de SELECT
 
 Responde en formato JSON:
 {
   "areaIndex": número del área (0, 1, 2, etc.),
   "confianza": porcentaje de confianza (0-100),
-  "razon": "breve explicación de por qué elegiste esta área"
+  "razon": "explicación mencionando QUÉ OPCIÓN de QUÉ CAMPO SELECT coincidió"
 }
 
 Si no estás seguro (confianza < 70%), usa areaIndex: -1`;
@@ -503,7 +562,7 @@ Si no estás seguro (confianza < 70%), usa areaIndex: -1`;
       messages: [
         {
           role: 'system',
-          content: 'Eres un experto en clasificar problemas universitarios en áreas específicas.'
+          content: 'Eres un experto en clasificar problemas universitarios en áreas específicas. Presta especial atención a los campos del formulario de cada área, ya que indican qué tipo de problemas maneja esa área.'
         },
         { role: 'user', content: prompt }
       ],

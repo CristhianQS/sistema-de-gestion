@@ -98,7 +98,15 @@ export async function loadChatbotConfig(): Promise<Partial<ChatbotConfig> | null
       // 42P01 = La tabla no existe
       if (error.code === '42P01' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
         console.warn('⚠️ La tabla chatbot_config no existe. Ejecuta el script SQL en Supabase.');
-        console.warn('📄 Archivo: sql/create_chatbot_config_table.sql');
+        console.warn('📄 Archivo: sql/fix_chatbot_config_permissions.sql');
+        return null;
+      }
+
+      // Error 406 - Problema de permisos RLS
+      if (error.message?.includes('406') || error.message?.includes('Not Acceptable')) {
+        console.error('🔴 Error 406: Problema de permisos RLS en chatbot_config');
+        console.warn('📋 Solución: Ejecuta sql/fix_chatbot_config_permissions.sql en Supabase');
+        console.warn('📖 Ver: SOLUCION_ERROR_406.md para instrucciones detalladas');
         return null;
       }
 

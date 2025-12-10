@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import ModalDetalleReporte from './modals/ModalDetalleReporte';
+import ReviewIndicator from './ReviewIndicator';
+import { markAsReviewed } from '../services/database/submissions.service';
 import { FileText, Clock, Zap, CheckCircle, Search, Filter } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 interface Reporte {
   id: number;
@@ -14,6 +17,9 @@ interface Reporte {
   submitted_at: string;
   status: 'pending' | 'in_progress' | 'resolved';
   area_nombre?: string;
+  reviewed?: boolean;
+  reviewed_at?: string | null;
+  reviewed_by?: string | null;
 }
 
 interface Area {
@@ -22,6 +28,7 @@ interface Area {
 }
 
 const VisualizarReportes: React.FC = () => {
+  const { user } = useAuth();
   const [reportes, setReportes] = useState<Reporte[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedReporte, setSelectedReporte] = useState<Reporte | null>(null);
@@ -37,7 +44,7 @@ const VisualizarReportes: React.FC = () => {
     try {
       const { data: reportesData, error: reportesError } = await supabase
         .from('area_submissions')
-        .select('*')
+        .select('*, reviewed, reviewed_at, reviewed_by')
         .order('submitted_at', { ascending: false });
 
       if (reportesError) throw reportesError;
@@ -63,6 +70,17 @@ const VisualizarReportes: React.FC = () => {
       console.error('Error al cargar reportes:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleMarkAsReviewed = async (reporteId: number, event: React.MouseEvent) => {
+    event.stopPropagation();
+    try {
+      const userEmail = user?.email || 'admin@upeu.edu.pe';
+      await markAsReviewed(reporteId, userEmail);
+      await loadReportes();
+    } catch (error) {
+      console.error('Error al marcar como revisado:', error);
     }
   };
 
@@ -347,6 +365,19 @@ const VisualizarReportes: React.FC = () => {
                     {/* Información principal */}
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
+                        {/* Indicador de revisión */}
+                        <button
+                          onClick={(e) => handleMarkAsReviewed(reporte.id, e)}
+                          className="hover:scale-110 transition-transform"
+                        >
+                          <ReviewIndicator
+                            reviewed={reporte.reviewed || false}
+                            reviewedAt={reporte.reviewed_at}
+                            reviewedBy={reporte.reviewed_by}
+                            size="md"
+                          />
+                        </button>
+
                         <StatusIcon className={`w-5 h-5 ${statusInfo.textColor}`} />
                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusInfo.bgColor} ${statusInfo.textColor} border ${statusInfo.borderColor}`}>
                           {statusInfo.label}

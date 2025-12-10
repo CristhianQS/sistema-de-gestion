@@ -239,10 +239,32 @@ const ModalFormularioArea: React.FC<Props> = ({ isOpen, onClose, areaId, areaNam
         );
 
       case 'select':
-        // Filtrar opciones del grupo especificado en el campo
-        const fieldGroupOptions = selectionOptions.filter(
-          opt => opt.group_name === (field.options || 'default')
-        );
+        // Determinar si las opciones están en JSON o en selection_options
+        let options: string[] = [];
+
+        if (field.options) {
+          try {
+            // Intentar parsear como JSON primero
+            const parsed = JSON.parse(field.options);
+            if (Array.isArray(parsed)) {
+              // Las opciones están guardadas como JSON array
+              options = parsed.filter(opt => opt && opt.trim() !== '');
+            } else {
+              // Es un nombre de grupo, buscar en selection_options
+              const fieldGroupOptions = selectionOptions.filter(
+                opt => opt.group_name === field.options
+              );
+              options = fieldGroupOptions.map(opt => opt.option_value);
+            }
+          } catch (e) {
+            // No es JSON, es un nombre de grupo
+            const fieldGroupOptions = selectionOptions.filter(
+              opt => opt.group_name === field.options
+            );
+            options = fieldGroupOptions.map(opt => opt.option_value);
+          }
+        }
+
         const isOtrosSelected = formData[field.field_name] === 'otros';
 
         return (
@@ -254,9 +276,9 @@ const ModalFormularioArea: React.FC<Props> = ({ isOpen, onClose, areaId, areaNam
               required={field.is_required}
             >
               <option value="">Selecciona una opción</option>
-              {fieldGroupOptions.map((option) => (
-                <option key={option.id} value={option.option_value}>
-                  {option.option_label}
+              {options.map((option, index) => (
+                <option key={index} value={option}>
+                  {option}
                 </option>
               ))}
             </select>

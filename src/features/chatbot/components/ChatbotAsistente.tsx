@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
-import type { Area, DataAlumno } from '../../../types';
+import type { Area, DataAlumno, AreaField } from '../../../types';
 import { chatbotConfig, getMensaje, actualizarConfig } from '../config/chatbotPrompts';
 import * as OpenAIService from '../services/openai.service';
-import { getAllAreas } from '../../../services/database/areas.service';
+import { getAllAreasUnpaginated } from '../../../services/database/areas.service';
 import { getAllPabellones, getSalonesByPabellon } from '../../../services/database/pabellones.service';
 import { getStudentByCode } from '../../../services/database/students.service';
 import { createSubmission } from '../../../services/database/submissions.service';
 import { loadChatbotConfig } from '../../../services/database/chatbot-config.service';
+import { getAllAreaFields } from '../../../services/database/area-fields.service';
 import SupabaseImageUploader from '../../../components/SupabaseImageUploader';
 import { supabase } from '../../../lib/supabase';
 
@@ -101,7 +102,7 @@ const ChatbotAsistente: React.FC = () => {
 
   const loadAreas = async () => {
     try {
-      const data = await getAllAreas();
+      const data = await getAllAreasUnpaginated();
       setAreas(data);
     } catch (error) {
       console.error('Error al cargar áreas:', error);
@@ -198,6 +199,7 @@ const ChatbotAsistente: React.FC = () => {
         alumno_dni: alumno.dni || '',
         alumno_codigo: alumno.codigo || 0,
         alumno_nombre: alumno.estudiante || '',
+        submitted_at: new Date().toISOString(),
         form_data: {
           descripcion: description,
           ubicacion: location,
@@ -357,8 +359,60 @@ const ChatbotAsistente: React.FC = () => {
     addBotMessage('Déjame analizar tu problema... 🤔');
 
     try {
-      // Detectar área por palabras clave
-      const areaDetectada = await OpenAIService.detectarAreaPorPalabrasClave(problema, areas);
+      // Cargar todos los campos de las áreas para ayudar a la detección
+      let areaFieldsMap: Map<number, AreaField[]> | undefined;
+      try {
+        areaFieldsMap = await getAllAreaFields();
+
+        // Expandir las opciones de campos SELECT que usan selection_options
+        for (const [areaId, fields] of areaFieldsMap) {
+          for (const field of fields) {
+            if (field.field_type === 'select' && field.options) {
+              // Verificar si NO es un JSON array (es un nombre de grupo)
+              try {
+                const parsed = JSON.parse(field.options);
+                if (!Array.isArray(parsed)) {
+                  // Es un string, no JSON, cargar opciones de selection_options
+                  const { data: selectionOpts } = await supabase
+                    .from('selection_options')
+                    .select('option_value, option_label')
+                    .eq('area_id', areaId)
+                    .eq('group_name', field.options)
+                    .order('order_index');
+
+                  if (selectionOpts && selectionOpts.length > 0) {
+                    // Reemplazar con JSON array de opciones
+                    const optionsArray = selectionOpts.map(opt => opt.option_label);
+                    field.options = JSON.stringify(optionsArray);
+                  }
+                }
+              } catch (e) {
+                // No es JSON, es un nombre de grupo, cargar opciones
+                const { data: selectionOpts } = await supabase
+                  .from('selection_options')
+                  .select('option_value, option_label')
+                  .eq('area_id', areaId)
+                  .eq('group_name', field.options)
+                  .order('order_index');
+
+                if (selectionOpts && selectionOpts.length > 0) {
+                  // Reemplazar con JSON array de opciones
+                  const optionsArray = selectionOpts.map(opt => opt.option_label);
+                  field.options = JSON.stringify(optionsArray);
+                }
+              }
+            }
+          }
+        }
+
+        console.log('✅ Campos de áreas cargados para detección:', areaFieldsMap.size, 'áreas');
+      } catch (error) {
+        console.warn('⚠️ No se pudieron cargar campos de áreas, usando solo descripción:', error);
+        areaFieldsMap = undefined;
+      }
+
+      // Detectar área por palabras clave usando los campos personalizados
+      const areaDetectada = await OpenAIService.detectarAreaPorPalabrasClave(problema, areas, areaFieldsMap);
 
       if (areaDetectada) {
         // Extraer información completa
@@ -390,51 +444,65 @@ const ChatbotAsistente: React.FC = () => {
         ).join('\n');
 
         addBotMessage(
-          `Entiendo. Detecto que es un problema de **${areaDetectada.area.name}**.\n\n` +
+          `✅ Entiendo. Detecto que es un problema de **${areaDetectada.area.name}**.\n\n` +
           `📝 ${informacion.descripcion}\n\n` +
-          `Ahora, ¿en qué pabellón se encuentra el problema?\n\n${pabellonesTexto}\n\n` +
-          `Escribe el número del pabellón.`
+          `📍 Ahora, ¿en qué pabellón se encuentra el problema?\n\n` +
+          `${pabellonesTexto}\n\n` +
+          `💡 **Escribe el NÚMERO de tu opción** (ejemplo: "1" para ${pabellones[0].nombre})`
         );
       } else {
         // No se pudo detectar con confianza
         setIsTyping(false);
 
+        // Reiniciar el estado
         setConversationState({
           ...conversationState,
-          step: 'waiting_area',
-          description: problema
+          step: 'waiting_problem',
+          description: ''
         });
 
-        const areasTexto = areas.map((area, index) =>
-          `${index + 1}. ${area.name}`
-        ).join('\n');
-
-        addBotMessage(`Entiendo tu problema, pero necesito que me ayudes seleccionando el área correcta:\n\n${areasTexto}\n\nEscribe el número del área.`);
+        addBotMessage(
+          `❌ Lo siento, no logro entender completamente tu inconveniente.\n\n` +
+          `📞 Te recomiendo contactar directamente con nuestra **Mesa de Ayuda**:\n\n` +
+          `📱 **WhatsApp:** 951292515\n\n` +
+          `💡 También puedes intentar describirme tu problema de otra manera, mencionando:\n` +
+          `   - El equipo o lugar específico (proyector, silla, salón, etc.)\n` +
+          `   - Qué está fallando exactamente\n\n` +
+          `¿Quieres intentarlo de nuevo o prefieres contactar a la Mesa de Ayuda?`
+        );
       }
     } catch (error) {
       console.error('Error al detectar área:', error);
       setIsTyping(false);
 
-      // Fallback: mostrar lista de áreas
+      // Reiniciar el estado
       setConversationState({
         ...conversationState,
-        step: 'waiting_area',
-        description: problema
+        step: 'waiting_problem',
+        description: ''
       });
 
-      const areasTexto = areas.map((area, index) =>
-        `${index + 1}. ${area.name}`
-      ).join('\n');
-
-      addBotMessage(`Entiendo. ¿En qué área necesitas ayuda?\n\n${areasTexto}\n\nEscribe el número del área.`);
+      addBotMessage(
+        `❌ Lo siento, no logro entender completamente tu inconveniente.\n\n` +
+        `📞 Te recomiendo contactar directamente con nuestra **Mesa de Ayuda**:\n\n` +
+        `📱 **WhatsApp:** 951292515\n\n` +
+        `💡 También puedes intentar describirme tu problema de otra manera, mencionando:\n` +
+        `   - El equipo o lugar específico (proyector, silla, salón, etc.)\n` +
+        `   - Qué está fallando exactamente\n\n` +
+        `¿Quieres intentarlo de nuevo o prefieres contactar a la Mesa de Ayuda?`
+      );
     }
   };
 
   const handlePabellon = async (respuesta: string) => {
-    const numeroPabellon = parseInt(respuesta);
+    const numeroPabellon = parseInt(respuesta.trim());
 
     if (isNaN(numeroPabellon) || numeroPabellon < 1 || numeroPabellon > pabellones.length) {
-      addBotMessage(`Por favor, elige un número entre 1 y ${pabellones.length}.`);
+      addBotMessage(
+        `⚠️ Por favor, escribe el **NÚMERO** de la opción (del 1 al ${pabellones.length}).\n\n` +
+        `❌ No escribas el nombre completo\n` +
+        `✅ Solo el número: 1, 2, 3, etc.`
+      );
       return;
     }
 
@@ -468,9 +536,9 @@ const ChatbotAsistente: React.FC = () => {
       ).join('\n');
 
       addBotMessage(
-        `Pabellón **${pabellonSeleccionado.nombre}** seleccionado.\n\n` +
-        `¿En qué salón específicamente?\n\n${salonesTexto}\n\n` +
-        `Escribe el número del salón.`
+        `✅ Perfecto, **${pabellonSeleccionado.nombre}**.\n\n` +
+        `🚪 ¿En qué salón específicamente?\n\n${salonesTexto}\n\n` +
+        `💡 **Escribe el NÚMERO** (ejemplo: "1" para ${salonesDelPabellon[0].nombre})`
       );
     } catch (error) {
       console.error('Error al cargar salones:', error);
@@ -480,10 +548,14 @@ const ChatbotAsistente: React.FC = () => {
   };
 
   const handleSalon = async (respuesta: string) => {
-    const numeroSalon = parseInt(respuesta);
+    const numeroSalon = parseInt(respuesta.trim());
 
     if (isNaN(numeroSalon) || numeroSalon < 1 || numeroSalon > salones.length) {
-      addBotMessage(`Por favor, elige un número entre 1 y ${salones.length}.`);
+      addBotMessage(
+        `⚠️ Por favor, escribe el **NÚMERO** del salón (del 1 al ${salones.length}).\n\n` +
+        `❌ No escribas el nombre completo\n` +
+        `✅ Solo el número: 1, 2, 3, etc.`
+      );
       return;
     }
 

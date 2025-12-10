@@ -7,7 +7,7 @@ import StudentReportsModal from '../components/StudentReportsModal';
 import ChatbotAsistente from '../features/chatbot/components/ChatbotAsistente';
 import { useAuth } from '../context/AuthContext';
 import type { Area, DataAlumno } from '../lib/supabase';
-import { getAllAreas } from '../services/database';
+import { getAllAreasUnpaginated } from '../services/database';
 
 const PublicView: React.FC = () => {
   const [isModalLoginOpen, setIsModalLoginOpen] = useState(false);
@@ -44,7 +44,7 @@ const PublicView: React.FC = () => {
 
   const loadAreas = async () => {
     try {
-      const data = await getAllAreas();
+      const data = await getAllAreasUnpaginated();
       setAreas(data);
     } catch (error) {
       console.error('Error al cargar áreas:', error);

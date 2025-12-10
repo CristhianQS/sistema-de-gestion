@@ -1,5 +1,7 @@
 import { supabase } from '../../lib/supabase';
 import type { AreaSubmission } from '../../lib/supabase';
+import type { PaginationParams, PaginationResult } from '../../types/pagination';
+import { toPaginationRange, createPaginationResult, DEFAULT_PAGE_SIZE } from '../../types/pagination';
 
 /**
  * Servicio de acceso a datos para Reportes/Submissions
@@ -7,9 +9,48 @@ import type { AreaSubmission } from '../../lib/supabase';
  */
 
 /**
- * Obtener todos los reportes con información completa (joins)
+ * Obtener todos los reportes con información completa (joins) - PAGINADO
  */
-export async function getAllSubmissions(): Promise<AreaSubmission[]> {
+export async function getAllSubmissions(
+  params?: Partial<PaginationParams>
+): Promise<PaginationResult<AreaSubmission>> {
+  const { page = 1, pageSize = DEFAULT_PAGE_SIZE } = params || {};
+  const { from, to } = toPaginationRange({ page, pageSize });
+
+  // Obtener el conteo total
+  const { count, error: countError } = await supabase
+    .from('area_submissions')
+    .select('*', { count: 'exact', head: true });
+
+  if (countError) {
+    console.error('Error al contar reportes:', countError);
+    throw countError;
+  }
+
+  // Obtener los datos paginados
+  const { data, error } = await supabase
+    .from('area_submissions')
+    .select(`
+      *,
+      area:areas(id, name, description),
+      alumno:data_alumnos(id, codigo, estudiante)
+    `)
+    .order('created_at', { ascending: false })
+    .range(from, to);
+
+  if (error) {
+    console.error('Error al obtener reportes:', error);
+    throw error;
+  }
+
+  return createPaginationResult(data || [], count || 0, { page, pageSize });
+}
+
+/**
+ * Obtener todos los reportes sin paginación - DEPRECADO, usar getAllSubmissions con paginación
+ * @deprecated Usar getAllSubmissions con parámetros de paginación
+ */
+export async function getAllSubmissionsUnpaginated(): Promise<AreaSubmission[]> {
   const { data, error } = await supabase
     .from('area_submissions')
     .select(`
@@ -53,9 +94,27 @@ export async function getSubmissionById(id: number): Promise<AreaSubmission | nu
 }
 
 /**
- * Obtener reportes por área
+ * Obtener reportes por área - PAGINADO
  */
-export async function getSubmissionsByArea(areaId: number): Promise<AreaSubmission[]> {
+export async function getSubmissionsByArea(
+  areaId: number,
+  params?: Partial<PaginationParams>
+): Promise<PaginationResult<AreaSubmission>> {
+  const { page = 1, pageSize = DEFAULT_PAGE_SIZE } = params || {};
+  const { from, to } = toPaginationRange({ page, pageSize });
+
+  // Obtener el conteo total
+  const { count, error: countError } = await supabase
+    .from('area_submissions')
+    .select('*', { count: 'exact', head: true })
+    .eq('area_id', areaId);
+
+  if (countError) {
+    console.error('Error al contar reportes por área:', countError);
+    throw countError;
+  }
+
+  // Obtener los datos paginados
   const { data, error } = await supabase
     .from('area_submissions')
     .select(`
@@ -64,21 +123,40 @@ export async function getSubmissionsByArea(areaId: number): Promise<AreaSubmissi
       alumno:data_alumnos(id, codigo, estudiante)
     `)
     .eq('area_id', areaId)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .range(from, to);
 
   if (error) {
     console.error('Error al obtener reportes por área:', error);
     throw error;
   }
 
-  return data || [];
+  return createPaginationResult(data || [], count || 0, { page, pageSize });
 }
 
 /**
- * Obtener reportes por código de estudiante
+ * Obtener reportes por código de estudiante - PAGINADO
  * Útil para que los estudiantes vean sus propios reportes
  */
-export async function getSubmissionsByStudentCode(codigoAlumno: string): Promise<AreaSubmission[]> {
+export async function getSubmissionsByStudentCode(
+  codigoAlumno: string,
+  params?: Partial<PaginationParams>
+): Promise<PaginationResult<AreaSubmission>> {
+  const { page = 1, pageSize = DEFAULT_PAGE_SIZE } = params || {};
+  const { from, to } = toPaginationRange({ page, pageSize });
+
+  // Obtener el conteo total
+  const { count, error: countError } = await supabase
+    .from('area_submissions')
+    .select('*', { count: 'exact', head: true })
+    .eq('codigo_alumno', codigoAlumno);
+
+  if (countError) {
+    console.error('Error al contar reportes del estudiante:', countError);
+    throw countError;
+  }
+
+  // Obtener los datos paginados
   const { data, error } = await supabase
     .from('area_submissions')
     .select(`
@@ -87,14 +165,15 @@ export async function getSubmissionsByStudentCode(codigoAlumno: string): Promise
       alumno:data_alumnos(id, codigo, estudiante)
     `)
     .eq('codigo_alumno', codigoAlumno)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .range(from, to);
 
   if (error) {
     console.error('Error al obtener reportes del estudiante:', error);
     throw error;
   }
 
-  return data || [];
+  return createPaginationResult(data || [], count || 0, { page, pageSize });
 }
 
 /**
@@ -175,7 +254,7 @@ export async function updateSubmission(
  */
 export async function updateSubmissionStatus(
   id: number,
-  status: 'pending' | 'in_progress' | 'completed'
+  status: 'pending' | 'approved' | 'rejected'
 ): Promise<AreaSubmission> {
   return updateSubmission(id, { status });
 }
@@ -244,7 +323,8 @@ export async function getAIGeneratedSubmissions(): Promise<AreaSubmission[]> {
 }
 
 /**
- * Contar reportes por estado
+ * Contar reportes por estado - OPTIMIZADO
+ * En lugar de 4 queries, hace 1 sola query y cuenta en memoria
  */
 export async function countSubmissionsByStatus(): Promise<{
   pending: number;
@@ -252,34 +332,85 @@ export async function countSubmissionsByStatus(): Promise<{
   completed: number;
   total: number;
 }> {
-  const { count: totalCount, error: totalError } = await supabase
+  // Una sola query obteniendo solo el campo status
+  const { data, error } = await supabase
     .from('area_submissions')
-    .select('*', { count: 'exact', head: true });
+    .select('status');
 
-  const { count: pendingCount, error: pendingError } = await supabase
-    .from('area_submissions')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'pending');
-
-  const { count: inProgressCount, error: inProgressError } = await supabase
-    .from('area_submissions')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'in_progress');
-
-  const { count: completedCount, error: completedError } = await supabase
-    .from('area_submissions')
-    .select('*', { count: 'exact', head: true })
-    .eq('status', 'completed');
-
-  if (totalError || pendingError || inProgressError || completedError) {
-    console.error('Error al contar reportes por estado');
-    throw totalError || pendingError || inProgressError || completedError;
+  if (error) {
+    console.error('Error al contar reportes por estado:', error);
+    throw error;
   }
 
-  return {
-    pending: pendingCount || 0,
-    in_progress: inProgressCount || 0,
-    completed: completedCount || 0,
-    total: totalCount || 0
+  // Contar en memoria (más eficiente que 4 queries separadas)
+  const counts = {
+    pending: 0,
+    in_progress: 0,
+    completed: 0,
+    total: data?.length || 0,
   };
+
+  data?.forEach((item) => {
+    if (item.status === 'pending') counts.pending++;
+    else if (item.status === 'in_progress') counts.in_progress++;
+    else if (item.status === 'completed') counts.completed++;
+  });
+
+  return counts;
+}
+
+/**
+ * Marcar un reporte como revisado
+ */
+export async function markAsReviewed(
+  submissionId: number,
+  reviewedBy: string
+): Promise<void> {
+  const { error } = await supabase.rpc('mark_report_as_reviewed', {
+    p_submission_id: submissionId,
+    p_reviewed_by: reviewedBy
+  });
+
+  if (error) {
+    console.error('Error al marcar como revisado:', error);
+    throw error;
+  }
+}
+
+/**
+ * Obtener conteo de reportes no revisados por área
+ */
+export async function getUnreviewedCountByArea(areaId: number): Promise<number> {
+  const { data, error } = await supabase.rpc('get_unreviewed_count_by_area', {
+    p_area_id: areaId
+  });
+
+  if (error) {
+    console.error('Error al obtener conteo de no revisados:', error);
+    return 0;
+  }
+
+  return data || 0;
+}
+
+/**
+ * Obtener todos los reportes no revisados
+ */
+export async function getUnreviewedSubmissions(): Promise<AreaSubmission[]> {
+  const { data, error } = await supabase
+    .from('area_submissions')
+    .select(`
+      *,
+      area:areas(id, name, description),
+      alumno:data_alumnos(id, codigo, estudiante)
+    `)
+    .eq('reviewed', false)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error al obtener reportes no revisados:', error);
+    throw error;
+  }
+
+  return data || [];
 }
