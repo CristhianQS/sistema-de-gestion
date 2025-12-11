@@ -27,7 +27,7 @@ export async function getAllSubmissions(
     throw countError;
   }
 
-  // Obtener los datos paginados
+  // Obtener los datos paginados ordenados por prioridad primero
   const { data, error } = await supabase
     .from('area_submissions')
     .select(`
@@ -35,7 +35,8 @@ export async function getAllSubmissions(
       area:areas(id, name, description),
       alumno:data_alumnos(id, codigo, estudiante)
     `)
-    .order('created_at', { ascending: false })
+    .order('prioridad', { ascending: false }) // Reportes de docentes (alta) primero
+    .order('created_at', { ascending: false }) // Luego por fecha
     .range(from, to);
 
   if (error) {
@@ -413,4 +414,122 @@ export async function getUnreviewedSubmissions(): Promise<AreaSubmission[]> {
   }
 
   return data || [];
+}
+
+/**
+ * Obtener reportes de docentes con prioridad
+ * Los reportes de docentes se muestran primero
+ */
+export async function getDocenteSubmissions(
+  params?: Partial<PaginationParams>
+): Promise<PaginationResult<AreaSubmission>> {
+  const { page = 1, pageSize = DEFAULT_PAGE_SIZE } = params || {};
+  const { from, to } = toPaginationRange({ page, pageSize });
+
+  // Obtener el conteo total
+  const { count, error: countError } = await supabase
+    .from('area_submissions')
+    .select('*', { count: 'exact', head: true })
+    .eq('es_docente', true);
+
+  if (countError) {
+    console.error('Error al contar reportes de docentes:', countError);
+    throw countError;
+  }
+
+  // Obtener los datos paginados
+  const { data, error } = await supabase
+    .from('area_submissions')
+    .select(`
+      *,
+      area:areas(id, name, description),
+      alumno:data_alumnos(id, codigo, estudiante)
+    `)
+    .eq('es_docente', true)
+    .order('created_at', { ascending: false })
+    .range(from, to);
+
+  if (error) {
+    console.error('Error al obtener reportes de docentes:', error);
+    throw error;
+  }
+
+  return createPaginationResult(data || [], count || 0, { page, pageSize });
+}
+
+/**
+ * Obtener todos los reportes con prioridad para docentes
+ * Los reportes de docentes (prioridad alta) se muestran primero
+ */
+export async function getAllSubmissionsWithPriority(
+  params?: Partial<PaginationParams>
+): Promise<PaginationResult<AreaSubmission>> {
+  const { page = 1, pageSize = DEFAULT_PAGE_SIZE } = params || {};
+  const { from, to } = toPaginationRange({ page, pageSize });
+
+  // Obtener el conteo total
+  const { count, error: countError } = await supabase
+    .from('area_submissions')
+    .select('*', { count: 'exact', head: true });
+
+  if (countError) {
+    console.error('Error al contar reportes:', countError);
+    throw countError;
+  }
+
+  // Obtener los datos paginados con orden de prioridad
+  const { data, error } = await supabase
+    .from('area_submissions')
+    .select(`
+      *,
+      area:areas(id, name, description),
+      alumno:data_alumnos(id, codigo, estudiante)
+    `)
+    .order('prioridad', { ascending: false }) // Ordenar por prioridad primero
+    .order('created_at', { ascending: false }) // Luego por fecha
+    .range(from, to);
+
+  if (error) {
+    console.error('Error al obtener reportes con prioridad:', error);
+    throw error;
+  }
+
+  return createPaginationResult(data || [], count || 0, { page, pageSize });
+}
+
+/**
+ * Crear reporte de docente
+ * Automáticamente marca el reporte como es_docente y prioridad alta
+ */
+export async function createDocenteSubmission(
+  submission: Omit<AreaSubmission, 'id' | 'created_at' | 'updated_at' | 'es_docente' | 'prioridad'>,
+  docenteId: number,
+  docenteDni: string,
+  docenteNombre: string
+): Promise<AreaSubmission> {
+  const submissionData = {
+    ...submission,
+    es_docente: true,
+    docente_id: docenteId,
+    docente_dni: docenteDni,
+    docente_nombre: docenteNombre,
+    prioridad: 'alta' as const,
+  };
+
+  const { data, error } = await supabase
+    .from('area_submissions')
+    .insert([submissionData])
+    .select(`
+      *,
+      area:areas(id, name, description),
+      alumno:data_alumnos(id, codigo, estudiante)
+    `)
+    .single();
+
+  if (error) {
+    console.error('Error al crear reporte de docente:', error);
+    throw error;
+  }
+
+  return data;
 }

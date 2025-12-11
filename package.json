@@ -14,7 +14,9 @@
     "check:deployment": "bash scripts/check-deployment.sh",
     "deploy:vercel": "bash scripts/deploy-vercel.sh --prod",
     "deploy:netlify": "bash scripts/deploy-netlify.sh --prod",
-    "deploy:docker": "bash scripts/deploy-docker.sh"
+    "deploy:docker": "bash scripts/deploy-docker.sh",
+    "clean": "bash scripts/clean-project.sh",
+    "clean:deep": "bash scripts/clean-project.sh --deep"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.80.0",

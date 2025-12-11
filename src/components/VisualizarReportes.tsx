@@ -20,6 +20,12 @@ interface Reporte {
   reviewed?: boolean;
   reviewed_at?: string | null;
   reviewed_by?: string | null;
+  // Campos para reportes de docentes
+  es_docente?: boolean;
+  docente_dni?: string | null;
+  docente_nombre?: string | null;
+  docente_id?: number | null;
+  prioridad?: 'normal' | 'alta' | 'urgente';
 }
 
 interface Area {
@@ -44,10 +50,16 @@ const VisualizarReportes: React.FC = () => {
     try {
       const { data: reportesData, error: reportesError } = await supabase
         .from('area_submissions')
-        .select('*, reviewed, reviewed_at, reviewed_by')
+        .select('*, reviewed, reviewed_at, reviewed_by, es_docente, docente_dni, docente_nombre, docente_id, prioridad')
+        .order('prioridad', { ascending: false }) // Reportes de docentes (prioridad alta) primero
         .order('submitted_at', { ascending: false });
 
       if (reportesError) throw reportesError;
+
+      // Debug: Mostrar cuántos reportes de docentes hay
+      const docentesCount = reportesData?.filter(r => r.es_docente === true).length || 0;
+      const alumnosCount = reportesData?.filter(r => !r.es_docente).length || 0;
+      console.log(`📊 Total reportes: ${reportesData?.length || 0} | Docentes: ${docentesCount} | Alumnos: ${alumnosCount}`);
 
       const { data: areasData, error: areasError } = await supabase
         .from('areas')
@@ -189,12 +201,28 @@ const VisualizarReportes: React.FC = () => {
   };
 
   const filteredReportes = reportes.filter(reporte => {
-    const matchesStatus = filterStatus === 'all' || reporte.status === filterStatus;
+    // Filtro por estado o tipo (docentes)
+    let matchesStatus = true;
+
+    if (filterStatus === 'all') {
+      // Mostrar TODOS los reportes (alumnos y docentes)
+      matchesStatus = true;
+    } else if (filterStatus === 'docentes') {
+      // Mostrar SOLO reportes de docentes
+      matchesStatus = reporte.es_docente === true;
+    } else {
+      // Filtrar por estado (pending, in_progress, resolved)
+      matchesStatus = reporte.status === filterStatus;
+    }
+
+    // Filtro por búsqueda
     const matchesSearch =
       reporte.alumno_nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
       reporte.alumno_dni.includes(searchTerm) ||
       reporte.alumno_codigo.toString().includes(searchTerm) ||
-      reporte.area_nombre?.toLowerCase().includes(searchTerm.toLowerCase());
+      reporte.area_nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (reporte.docente_nombre && reporte.docente_nombre.toLowerCase().includes(searchTerm.toLowerCase()));
+
     return matchesStatus && matchesSearch;
   });
 
@@ -202,7 +230,8 @@ const VisualizarReportes: React.FC = () => {
     total: reportes.length,
     pending: reportes.filter(r => r.status === 'pending').length,
     in_progress: reportes.filter(r => r.status === 'in_progress').length,
-    resolved: reportes.filter(r => r.status === 'resolved').length
+    resolved: reportes.filter(r => r.status === 'resolved').length,
+    docentes: reportes.filter(r => r.es_docente === true).length
   };
 
   if (loading) {
@@ -223,13 +252,13 @@ const VisualizarReportes: React.FC = () => {
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
           <h2 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
             <FileText className="w-8 h-8 text-blue-600" />
-            Reportes de Estudiantes
+            Gestión de Reportes
           </h2>
-          <p className="text-gray-600 mt-2">Gestiona y da seguimiento a todos los reportes</p>
+          <p className="text-gray-600 mt-2">Gestiona y da seguimiento a todos los reportes de estudiantes y docentes</p>
         </div>
 
         {/* Cards de estadísticas */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-5 shadow-lg border border-blue-300">
             <div className="flex items-center justify-between">
               <div>
@@ -238,6 +267,21 @@ const VisualizarReportes: React.FC = () => {
               </div>
               <div className="bg-white bg-opacity-20 rounded-full p-3">
                 <FileText className="w-8 h-8 text-white" />
+              </div>
+            </div>
+          </div>
+
+          {/* Nueva tarjeta de Reportes de Docentes */}
+          <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-5 shadow-lg border-2 border-orange-400 ring-2 ring-orange-300">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-orange-100 text-sm font-medium">👨‍🏫 Docentes</p>
+                <p className="text-3xl font-bold text-white mt-1">{stats.docentes}</p>
+              </div>
+              <div className="bg-white bg-opacity-20 rounded-full p-3 animate-pulse">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
               </div>
             </div>
           </div>
@@ -309,6 +353,17 @@ const VisualizarReportes: React.FC = () => {
               >
                 Todos
               </button>
+              {/* Botón de filtro para DOCENTES */}
+              <button
+                onClick={() => setFilterStatus('docentes')}
+                className={`px-4 py-2 rounded-lg font-bold transition-all border-2 ${
+                  filterStatus === 'docentes'
+                    ? 'bg-orange-500 text-white shadow-lg border-orange-600 ring-2 ring-orange-300'
+                    : 'bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100'
+                }`}
+              >
+                👨‍🏫 Docentes
+              </button>
               <button
                 onClick={() => setFilterStatus('pending')}
                 className={`px-4 py-2 rounded-lg font-medium transition-all ${
@@ -363,13 +418,38 @@ const VisualizarReportes: React.FC = () => {
               return (
                 <div
                   key={reporte.id}
-                  className={`bg-white rounded-xl p-5 border-l-4 ${statusInfo.borderColor} border border-gray-200 hover:shadow-lg transition-all cursor-pointer`}
+                  className={`rounded-xl p-5 border-l-4 ${statusInfo.borderColor} border border-gray-200 hover:shadow-xl transition-all cursor-pointer relative overflow-hidden ${
+                    reporte.es_docente
+                      ? 'bg-gradient-to-br from-orange-50 via-orange-100 to-yellow-50 border-4 border-orange-400 shadow-xl ring-4 ring-orange-200'
+                      : 'bg-white'
+                  }`}
                   onClick={() => handleOpenModal(reporte)}
                 >
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  {/* Indicador visual de docente - Marca de agua */}
+                  {reporte.es_docente && (
+                    <div className="absolute top-0 right-0 opacity-10">
+                      <svg className="w-32 h-32 text-orange-600" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                      </svg>
+                    </div>
+                  )}
+
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
                     {/* Información principal */}
                     <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
+                      <div className="flex items-center gap-3 mb-3">
+                        {/* Badge de prioridad para docentes - MEJORADO */}
+                        {reporte.es_docente && (
+                          <div className="flex items-center gap-2">
+                            <span className="px-4 py-2 rounded-lg text-sm font-extrabold bg-gradient-to-r from-orange-500 to-red-500 text-white border-2 border-orange-600 shadow-lg animate-pulse">
+                              ⭐ PRIORIDAD DOCENTE
+                            </span>
+                            <svg className="w-6 h-6 text-orange-600 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                          </div>
+                        )}
+
                         {/* Indicador de revisión */}
                         <button
                           onClick={(e) => handleMarkAsReviewed(reporte.id, e)}
@@ -397,6 +477,28 @@ const VisualizarReportes: React.FC = () => {
                       <h3 className="text-lg font-bold text-gray-800 mb-1">
                         {reporte.alumno_nombre}
                       </h3>
+
+                      {/* Información del docente si aplica - MEJORADA */}
+                      {reporte.es_docente && reporte.docente_nombre && (
+                        <div className="mb-3 px-4 py-3 bg-gradient-to-r from-orange-100 to-yellow-100 border-2 border-orange-400 rounded-xl shadow-md">
+                          <div className="flex items-center gap-2">
+                            <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                            <div>
+                              <p className="text-xs text-orange-600 font-medium">REPORTADO POR DOCENTE</p>
+                              <p className="text-base font-bold text-orange-900">
+                                {reporte.docente_nombre}
+                                {reporte.docente_dni && (
+                                  <span className="text-sm font-normal text-orange-700 ml-2">
+                                    DNI: {reporte.docente_dni}
+                                  </span>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
 
                       <div className="flex flex-wrap gap-3 text-sm text-gray-600">
                         <span>📧 {reporte.alumno_dni}</span>

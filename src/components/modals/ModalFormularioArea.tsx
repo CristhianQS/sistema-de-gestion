@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import ModalSeleccionarUbicacion from './ModalSeleccionarUbicacion';
 import SupabaseImageUploader from '../SupabaseImageUploader';
+import { createDocenteSubmission } from '../../services/database/submissions.service';
+import type { Docente } from '../../services/database/docentes.service';
 
 interface DataAlumno {
   id: number;
@@ -18,6 +20,12 @@ interface DataAlumno {
   fecha_nacimiento: string | null;
   correo: string | null;
   pais: string | null;
+}
+
+// Interfaz para usuario verificado (puede ser alumno o docente)
+interface VerifiedUser {
+  data: DataAlumno | Docente;
+  tipo: 'alumno' | 'docente';
 }
 
 interface AreaField {
@@ -50,7 +58,7 @@ interface Props {
   onClose: () => void;
   areaId: number;
   areaName: string;
-  alumno: DataAlumno;
+  verifiedUser: VerifiedUser;
 }
 
 interface SelectionOption {
@@ -62,7 +70,10 @@ interface SelectionOption {
   order_index: number;
 }
 
-const ModalFormularioArea: React.FC<Props> = ({ isOpen, onClose, areaId, areaName, alumno }) => {
+const ModalFormularioArea: React.FC<Props> = ({ isOpen, onClose, areaId, areaName, verifiedUser }) => {
+  // Extraer datos del usuario verificado
+  const isDocente = verifiedUser.tipo === 'docente';
+  const userData = verifiedUser.data;
   const [fields, setFields] = useState<AreaField[]>([]);
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
@@ -149,34 +160,61 @@ const ModalFormularioArea: React.FC<Props> = ({ isOpen, onClose, areaId, areaNam
     setSubmitting(true);
 
     try {
-      // ✅ CORRECCIÓN: Separar la ubicación de los campos del formulario
-      const submissionData = {
-        area_id: areaId,
-        alumno_id: alumno.id,
-        alumno_dni: alumno.dni || '',
-        alumno_codigo: alumno.codigo || 0,
-        alumno_nombre: alumno.estudiante || '',
-        form_data: {
-          // Campos del formulario dinámico
-          ...formData,
-          // Ubicación guardada al mismo nivel (NO como un objeto separado)
-          pabellon_id: selectedPabellon.id,
-          pabellon_nombre: selectedPabellon.nombre,
-          pabellon_descripcion: selectedPabellon.descripcion,
-          salon_id: selectedSalon.id,
-          salon_nombre: selectedSalon.nombre,
-          salon_capacidad: selectedSalon.capacidad
-        },
-        status: 'pending'
+      // Preparar form_data con ubicación
+      const completeFormData = {
+        // Campos del formulario dinámico
+        ...formData,
+        // Ubicación guardada al mismo nivel
+        pabellon_id: selectedPabellon.id,
+        pabellon_nombre: selectedPabellon.nombre,
+        pabellon_descripcion: selectedPabellon.descripcion,
+        salon_id: selectedSalon.id,
+        salon_nombre: selectedSalon.nombre,
+        salon_capacidad: selectedSalon.capacidad
       };
 
-      console.log('📤 Enviando datos:', submissionData); // Debug
+      if (isDocente) {
+        // ✅ REPORTE DE DOCENTE - Usar función especializada
+        const docenteData = userData as Docente;
+        const submissionData = {
+          area_id: areaId,
+          alumno_id: null as any, // NULL para docentes (no aplica)
+          alumno_dni: docenteData.dni || '',
+          alumno_codigo: 0,
+          alumno_nombre: `${docenteData.nombres} ${docenteData.apellidos}`,
+          form_data: completeFormData,
+          status: 'pending' as const
+        };
 
-      const { error: submitError } = await supabase
-        .from('area_submissions')
-        .insert([submissionData]);
+        console.log('📤 Enviando reporte de DOCENTE:', submissionData);
 
-      if (submitError) throw submitError;
+        await createDocenteSubmission(
+          submissionData,
+          docenteData.id!,
+          docenteData.dni,
+          `${docenteData.nombres} ${docenteData.apellidos}`
+        );
+      } else {
+        // ✅ REPORTE DE ALUMNO - Proceso normal
+        const alumnoData = userData as DataAlumno;
+        const submissionData = {
+          area_id: areaId,
+          alumno_id: alumnoData.id,
+          alumno_dni: alumnoData.dni || '',
+          alumno_codigo: alumnoData.codigo || 0,
+          alumno_nombre: alumnoData.estudiante || '',
+          form_data: completeFormData,
+          status: 'pending'
+        };
+
+        console.log('📤 Enviando reporte de ALUMNO:', submissionData);
+
+        const { error: submitError } = await supabase
+          .from('area_submissions')
+          .insert([submissionData]);
+
+        if (submitError) throw submitError;
+      }
 
       setSuccess(true);
       setTimeout(() => {
@@ -358,9 +396,26 @@ const ModalFormularioArea: React.FC<Props> = ({ isOpen, onClose, areaId, areaNam
               <div>
                 <h3 className="text-2xl font-bold text-gray-800">{areaName}</h3>
                 <div className="mt-2 text-sm text-gray-600">
-                  <p><strong>Estudiante:</strong> {alumno.estudiante}</p>
-                  <p><strong>Código:</strong> {alumno.codigo}</p>
-                  <p><strong>DNI:</strong> {alumno.dni}</p>
+                  {isDocente ? (
+                    // Vista para DOCENTE
+                    <>
+                      <div className="mb-2 px-3 py-1.5 bg-orange-100 border border-orange-300 rounded-lg inline-block">
+                        <p className="text-sm font-bold text-orange-800">👨‍🏫 DOCENTE</p>
+                      </div>
+                      <p><strong>Nombre:</strong> {(userData as Docente).nombres} {(userData as Docente).apellidos}</p>
+                      <p><strong>DNI:</strong> {(userData as Docente).dni}</p>
+                      {(userData as Docente).especialidad && (
+                        <p><strong>Especialidad:</strong> {(userData as Docente).especialidad}</p>
+                      )}
+                    </>
+                  ) : (
+                    // Vista para ESTUDIANTE
+                    <>
+                      <p><strong>Estudiante:</strong> {(userData as DataAlumno).estudiante}</p>
+                      <p><strong>Código:</strong> {(userData as DataAlumno).codigo}</p>
+                      <p><strong>DNI:</strong> {(userData as DataAlumno).dni}</p>
+                    </>
+                  )}
                 </div>
               </div>
               <button

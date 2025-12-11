@@ -76,6 +76,12 @@ export interface AreaSubmission {
   reviewed?: boolean;
   reviewed_at?: string | null;
   reviewed_by?: string | null;
+  // Campos para reportes de docentes (con prioridad)
+  es_docente?: boolean;
+  docente_dni?: string | null;
+  docente_nombre?: string | null;
+  docente_id?: number | null;
+  prioridad?: 'normal' | 'alta' | 'urgente';
   // Relaciones con joins
   area?: {
     id: number;

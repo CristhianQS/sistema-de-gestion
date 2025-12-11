@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../../lib/supabase';
+import { getDocenteByDni } from '../../services/database/docentes.service';
+import type { Docente } from '../../services/database/docentes.service';
 
 interface DataAlumno {
   id: number;
@@ -18,10 +20,16 @@ interface DataAlumno {
   pais: string | null;
 }
 
+// Nueva interfaz unificada que puede ser alumno o docente
+interface VerifiedUser {
+  data: DataAlumno | Docente;
+  tipo: 'alumno' | 'docente';
+}
+
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  onVerified: (alumno: DataAlumno) => void;
+  onVerified: (user: VerifiedUser) => void;
   areaName: string;
 }
 
@@ -39,9 +47,24 @@ const ModalVerificarAlumno: React.FC<Props> = ({ isOpen, onClose, onVerified, ar
 
     try {
       const trimmedValue = searchValue.trim();
-      console.log('Buscando estudiante con:', trimmedValue);
+      console.log('Buscando usuario con:', trimmedValue);
 
-      // Primero intentar buscar por DNI (texto)
+      // PASO 1: Buscar en tabla de DOCENTES por DNI
+      try {
+        const docenteData = await getDocenteByDni(trimmedValue);
+        if (docenteData) {
+          console.log('✅ Docente encontrado:', docenteData);
+          onVerified({ data: docenteData, tipo: 'docente' });
+          setSearchValue('');
+          setError('');
+          setLoading(false);
+          return;
+        }
+      } catch (error) {
+        console.log('No es docente, buscando en alumnos...');
+      }
+
+      // PASO 2: Buscar en tabla de ALUMNOS por DNI
       let { data, error: searchError } = await supabase
         .from('data_alumnos')
         .select('*')
@@ -49,12 +72,12 @@ const ModalVerificarAlumno: React.FC<Props> = ({ isOpen, onClose, onVerified, ar
         .limit(1)
         .single();
 
-      console.log('Búsqueda por DNI:', { data, error: searchError });
+      console.log('Búsqueda alumno por DNI:', { data, error: searchError });
 
-      // Si no se encuentra por DNI, buscar por código (número)
+      // PASO 3: Si no se encuentra por DNI, buscar por CÓDIGO (número)
       if (!data) {
         const codigoNum = parseInt(trimmedValue);
-        
+
         if (!isNaN(codigoNum)) {
           const { data: dataCode, error: errorCode } = await supabase
             .from('data_alumnos')
@@ -62,33 +85,33 @@ const ModalVerificarAlumno: React.FC<Props> = ({ isOpen, onClose, onVerified, ar
             .eq('codigo', codigoNum)
             .limit(1)
             .single();
-          
+
           data = dataCode;
           searchError = errorCode;
-          console.log('Búsqueda por código:', { data, error: searchError });
+          console.log('Búsqueda alumno por código:', { data, error: searchError });
         }
       }
 
       if (searchError && searchError.code !== 'PGRST116') {
         console.error('Error de Supabase:', searchError);
-        setError('Error al buscar el estudiante en la base de datos');
+        setError('Error al buscar en la base de datos');
         setLoading(false);
         return;
       }
 
       if (!data) {
-        setError('No se encontró ningún estudiante con ese DNI o código');
+        setError('No se encontró ningún alumno o docente con ese DNI o código');
         setLoading(false);
         return;
       }
 
-      console.log('✅ Estudiante encontrado:', data);
-      onVerified(data);
+      console.log('✅ Alumno encontrado:', data);
+      onVerified({ data, tipo: 'alumno' });
       setSearchValue('');
       setError('');
     } catch (error: any) {
       console.error('Error exception:', error);
-      setError('Error inesperado al verificar el estudiante');
+      setError('Error inesperado al verificar el usuario');
     } finally {
       setLoading(false);
     }
@@ -107,7 +130,7 @@ const ModalVerificarAlumno: React.FC<Props> = ({ isOpen, onClose, onVerified, ar
           {/* Header */}
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h3 className="text-2xl font-bold text-gray-800">Verificación de Estudiante</h3>
+              <h3 className="text-2xl font-bold text-gray-800">Verificación de Usuario</h3>
               <p className="text-sm text-gray-600 mt-1">{areaName}</p>
             </div>
             <button
@@ -127,9 +150,9 @@ const ModalVerificarAlumno: React.FC<Props> = ({ isOpen, onClose, onVerified, ar
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <div>
-                <p className="text-sm text-blue-800 font-medium">Ingresa tu DNI o Código de estudiante</p>
+                <p className="text-sm text-blue-800 font-medium">Ingresa tu DNI o Código</p>
                 <p className="text-xs text-blue-700 mt-1">
-                  Necesitamos verificar tu identidad antes de continuar
+                  Puedes ser alumno o docente - Necesitamos verificar tu identidad antes de continuar
                 </p>
               </div>
             </div>
@@ -146,19 +169,19 @@ const ModalVerificarAlumno: React.FC<Props> = ({ isOpen, onClose, onVerified, ar
           <form onSubmit={handleVerify}>
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                DNI o Código de Estudiante
+                DNI o Código
               </label>
               <input
                 type="text"
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Ej: 73788334 o 201422107"
+                placeholder="Ej: 73788334 (DNI) o 201422107 (Código)"
                 required
                 autoFocus
               />
               <p className="text-xs text-gray-500 mt-1">
-                Prueba con: <strong>73788334</strong> (DNI) o <strong>201422107</strong> (Código)
+                <strong>Alumnos:</strong> DNI o Código | <strong>Docentes:</strong> DNI
               </p>
             </div>
 

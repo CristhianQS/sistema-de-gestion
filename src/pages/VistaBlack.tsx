@@ -8,6 +8,7 @@ import GestionAdminOro from '../components/GestionAdminOro';
 import GestionAdminPlata from '../components/GestionAdminPlata';
 import ListaUsuariosAreas from '../components/ListaUsuariosAreas';
 import GestionDatosAlumnos from '../components/GestionDatosAlumnos';
+import GestionDocentes from '../components/GestionDocentes';
 import AdminHeader from '../components/AdminHeader';
 import NotificationBell from '../components/notifications/NotificationBell';
 import NotificationPermissionBanner from '../components/notifications/NotificationPermissionBanner';
@@ -15,7 +16,7 @@ import NotificationPermissionBanner from '../components/notifications/Notificati
 const VistaBlack: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [currentView, setCurrentView] = useState<'dashboard' | 'areas' | 'pabellones' | 'reportes' | 'admin_oro' | 'admin_plata' | 'lista_usuarios' | 'datos_alumnos'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'areas' | 'pabellones' | 'reportes' | 'admin_oro' | 'admin_plata' | 'lista_usuarios' | 'datos_alumnos' | 'datos_docentes'>('dashboard');
 
   // Vista de Admin Oro
   if (currentView === 'admin_oro') {
@@ -110,6 +111,20 @@ const VistaBlack: React.FC = () => {
 
         <main className="max-w-7xl mx-auto px-4 py-8">
           <GestionDatosAlumnos />
+        </main>
+      </div>
+    );
+  }
+
+  // Vista de Datos de Docentes
+  if (currentView === 'datos_docentes') {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <NotificationPermissionBanner />
+        <AdminHeader showBackButton onBack={() => setCurrentView('dashboard')} />
+
+        <main className="max-w-7xl mx-auto px-4 py-8">
+          <GestionDocentes />
         </main>
       </div>
     );
@@ -249,6 +264,23 @@ const VistaBlack: React.FC = () => {
             <button
               onClick={() => setCurrentView('datos_alumnos')}
               className="w-full bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-400 transition-colors font-medium"
+            >
+              Ver Datos
+            </button>
+          </div>
+
+          {/* Card: Datos Docentes */}
+          <div className="bg-white rounded-lg p-6 shadow-lg border border-gray-200 hover:border-teal-500 transition-all">
+            <div className="w-12 h-12 bg-teal-500 rounded-lg flex items-center justify-center mb-4">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold text-gray-800 mb-2">Datos Docentes</h3>
+            <p className="text-gray-600 mb-4">Ver y gestionar información de docentes</p>
+            <button
+              onClick={() => setCurrentView('datos_docentes')}
+              className="w-full bg-teal-500 text-white px-4 py-2 rounded-lg hover:bg-teal-400 transition-colors font-medium"
             >
               Ver Datos
             </button>

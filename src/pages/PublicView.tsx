@@ -7,8 +7,15 @@ import StudentReportsModal from '../components/StudentReportsModal';
 import ChatbotAsistente from '../features/chatbot/components/ChatbotAsistente';
 import { useAuth } from '../context/AuthContext';
 import type { Area, DataAlumno } from '../lib/supabase';
+import type { Docente } from '../services/database/docentes.service';
 import { getAllAreasUnpaginated } from '../services/database';
 import { IMAGE_CONFIG } from '../constants';
+
+// Interfaz para usuario verificado (puede ser alumno o docente)
+interface VerifiedUser {
+  data: DataAlumno | Docente;
+  tipo: 'alumno' | 'docente';
+}
 
 const PublicView: React.FC = () => {
   const [isModalLoginOpen, setIsModalLoginOpen] = useState(false);
@@ -16,7 +23,7 @@ const PublicView: React.FC = () => {
   const [isModalFormularioOpen, setIsModalFormularioOpen] = useState(false);
   const [isReportsModalOpen, setIsReportsModalOpen] = useState(false);
   const [selectedArea, setSelectedArea] = useState<Area | null>(null);
-  const [verifiedAlumno, setVerifiedAlumno] = useState<DataAlumno | null>(null);
+  const [verifiedUser, setVerifiedUser] = useState<VerifiedUser | null>(null);
   const [areas, setAreas] = useState<Area[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
@@ -59,8 +66,8 @@ const PublicView: React.FC = () => {
     setIsModalVerificarOpen(true);
   };
 
-  const handleAlumnoVerified = (alumno: DataAlumno) => {
-    setVerifiedAlumno(alumno);
+  const handleUserVerified = (user: VerifiedUser) => {
+    setVerifiedUser(user);
     setIsModalVerificarOpen(false);
     setIsModalFormularioOpen(true);
   };
@@ -68,7 +75,7 @@ const PublicView: React.FC = () => {
   const handleCloseFormulario = () => {
     setIsModalFormularioOpen(false);
     setSelectedArea(null);
-    setVerifiedAlumno(null);
+    setVerifiedUser(null);
   };
 
   return (
@@ -179,18 +186,18 @@ const PublicView: React.FC = () => {
             setIsModalVerificarOpen(false);
             setSelectedArea(null);
           }}
-          onVerified={handleAlumnoVerified}
+          onVerified={handleUserVerified}
           areaName={selectedArea.name}
         />
       )}
 
-      {selectedArea && verifiedAlumno && (
+      {selectedArea && verifiedUser && (
         <ModalFormularioArea
           isOpen={isModalFormularioOpen}
           onClose={handleCloseFormulario}
           areaId={selectedArea.id}
           areaName={selectedArea.name}
-          alumno={verifiedAlumno}
+          verifiedUser={verifiedUser}
         />
       )}
 
