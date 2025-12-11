@@ -78,8 +78,9 @@ export const IMAGE_CONFIG = {
     FORMULARIOS: 'formularios',
     UPLOADS: 'uploads',
   },
-  PLACEHOLDER: 'https://via.placeholder.com/400x300?text=Sin+Imagen',
-  ERROR_PLACEHOLDER: 'https://via.placeholder.com/400x300?text=Error+al+cargar',
+  // SVG placeholder local para evitar dependencia de servicios externos
+  PLACEHOLDER: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect width="400" height="300" fill="%23e5e7eb"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="%239ca3af"%3ESin Imagen%3C/text%3E%3C/svg%3E',
+  ERROR_PLACEHOLDER: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect width="400" height="300" fill="%23fee2e2"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" fill="%23dc2626"%3EError al cargar%3C/text%3E%3C/svg%3E',
 } as const;
 
 // ============================================================================

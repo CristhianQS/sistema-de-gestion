@@ -24,8 +24,12 @@ export interface Notification {
  */
 export async function getNotifications(userEmail: string): Promise<Notification[]> {
   const { data, error } = await supabase
-    .from('notifications_with_details')
-    .select('*')
+    .from('notifications')
+    .select(`
+      *,
+      area:areas(name),
+      submission:area_submissions(alumno_nombre, alumno_codigo, status)
+    `)
     .eq('user_email', userEmail)
     .order('created_at', { ascending: false });
 
@@ -34,7 +38,14 @@ export async function getNotifications(userEmail: string): Promise<Notification[
     throw error;
   }
 
-  return data || [];
+  // Mapear los datos con joins
+  return (data || []).map(n => ({
+    ...n,
+    area_name: n.area?.name,
+    alumno_nombre: n.submission?.alumno_nombre,
+    alumno_codigo: n.submission?.alumno_codigo,
+    submission_status: n.submission?.status,
+  }));
 }
 
 /**
@@ -42,8 +53,12 @@ export async function getNotifications(userEmail: string): Promise<Notification[
  */
 export async function getUnreadNotifications(userEmail: string): Promise<Notification[]> {
   const { data, error } = await supabase
-    .from('notifications_with_details')
-    .select('*')
+    .from('notifications')
+    .select(`
+      *,
+      area:areas(name),
+      submission:area_submissions(alumno_nombre, alumno_codigo, status)
+    `)
     .eq('user_email', userEmail)
     .eq('read', false)
     .order('created_at', { ascending: false });
@@ -53,7 +68,14 @@ export async function getUnreadNotifications(userEmail: string): Promise<Notific
     throw error;
   }
 
-  return data || [];
+  // Mapear los datos con joins
+  return (data || []).map(n => ({
+    ...n,
+    area_name: n.area?.name,
+    alumno_nombre: n.submission?.alumno_nombre,
+    alumno_codigo: n.submission?.alumno_codigo,
+    submission_status: n.submission?.status,
+  }));
 }
 
 /**

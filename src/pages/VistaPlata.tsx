@@ -4,6 +4,8 @@ import { getAreaById } from '../services/database/areas.service';
 import { getAllSubmissionsUnpaginated } from '../services/database/submissions.service';
 import { getAllStudentsUnpaginated } from '../services/database/students.service';
 import type { Area, AreaSubmission, DataAlumno } from '../lib/supabase';
+import NotificationBell from '../components/notifications/NotificationBell';
+import NotificationPermissionBanner from '../components/notifications/NotificationPermissionBanner';
 
 type ViewMode = 'dashboard' | 'area' | 'reportes' | 'estudiantes';
 
@@ -66,6 +68,7 @@ const VistaPlata: React.FC = () => {
   if (currentView === 'area') {
     return (
       <div className="min-h-screen bg-gray-50">
+        <NotificationPermissionBanner />
         <header className="bg-white shadow-md">
           <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
             <div className="flex items-center space-x-4">
@@ -82,12 +85,15 @@ const VistaPlata: React.FC = () => {
                 <p className="text-sm text-gray-600">{user?.name || user?.email}</p>
               </div>
             </div>
-            <button
-              onClick={logout}
-              className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium"
-            >
-              Cerrar Sesión
-            </button>
+            <div className="flex items-center space-x-4">
+              {user?.email && <NotificationBell userEmail={user.email} />}
+              <button
+                onClick={logout}
+                className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium"
+              >
+                Cerrar Sesión
+              </button>
+            </div>
           </div>
         </header>
 
@@ -148,6 +154,7 @@ const VistaPlata: React.FC = () => {
 
     return (
       <div className="min-h-screen bg-gray-50">
+        <NotificationPermissionBanner />
         <header className="bg-white shadow-md">
           <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
             <div className="flex items-center space-x-4">
@@ -164,12 +171,15 @@ const VistaPlata: React.FC = () => {
                 <p className="text-sm text-gray-600">{user?.name || user?.email}</p>
               </div>
             </div>
-            <button
-              onClick={logout}
-              className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium"
-            >
-              Cerrar Sesión
-            </button>
+            <div className="flex items-center space-x-4">
+              {user?.email && <NotificationBell userEmail={user.email} />}
+              <button
+                onClick={logout}
+                className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium"
+              >
+                Cerrar Sesión
+              </button>
+            </div>
           </div>
         </header>
 
@@ -280,6 +290,7 @@ const VistaPlata: React.FC = () => {
 
     return (
       <div className="min-h-screen bg-gray-50">
+        <NotificationPermissionBanner />
         <header className="bg-white shadow-md">
           <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
             <div className="flex items-center space-x-4">
@@ -296,12 +307,15 @@ const VistaPlata: React.FC = () => {
                 <p className="text-sm text-gray-600">{user?.name || user?.email}</p>
               </div>
             </div>
-            <button
-              onClick={logout}
-              className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium"
-            >
-              Cerrar Sesión
-            </button>
+            <div className="flex items-center space-x-4">
+              {user?.email && <NotificationBell userEmail={user.email} />}
+              <button
+                onClick={logout}
+                className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium"
+              >
+                Cerrar Sesión
+              </button>
+            </div>
           </div>
         </header>
 
@@ -394,6 +408,7 @@ const VistaPlata: React.FC = () => {
   // Dashboard principal
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-200">
+      <NotificationPermissionBanner />
       {/* Header */}
       <header className="bg-white shadow-md">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
@@ -406,12 +421,15 @@ const VistaPlata: React.FC = () => {
               <p className="text-sm text-gray-600">{user?.name || user?.email}</p>
             </div>
           </div>
-          <button
-            onClick={logout}
-            className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium"
-          >
-            Cerrar Sesión
-          </button>
+          <div className="flex items-center space-x-4">
+            {user?.email && <NotificationBell userEmail={user.email} />}
+            <button
+              onClick={logout}
+              className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium"
+            >
+              Cerrar Sesión
+            </button>
+          </div>
         </div>
       </header>
 

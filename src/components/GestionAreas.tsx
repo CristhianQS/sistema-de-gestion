@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import GestionCamposArea from './GestionCamposArea';
 import SupabaseImageUploader from './SupabaseImageUploader';
 import { FolderOpen, Plus, Edit2, Trash2, X, Save, FileText, Image as ImageIcon } from 'lucide-react';
+import { IMAGE_CONFIG } from '../constants';
 
 interface Area {
   id: number;
@@ -257,11 +258,11 @@ const GestionAreas: React.FC = () => {
                 {/* Imagen del área */}
                 <div className="h-48 overflow-hidden bg-gray-100">
                   <img
-                    src={area.image_url || 'https://via.placeholder.com/400x300?text=Sin+Imagen'}
+                    src={area.image_url || IMAGE_CONFIG.PLACEHOLDER}
                     alt={area.name}
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Error+al+cargar';
+                      e.currentTarget.src = IMAGE_CONFIG.ERROR_PLACEHOLDER;
                     }}
                   />
                 </div>
@@ -386,7 +387,7 @@ const GestionAreas: React.FC = () => {
                         alt="Preview"
                         className="w-full h-48 object-cover rounded-lg border border-gray-200"
                         onError={(e) => {
-                          e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Error+al+cargar';
+                          e.currentTarget.src = IMAGE_CONFIG.ERROR_PLACEHOLDER;
                         }}
                       />
                       <button
@@ -402,9 +403,9 @@ const GestionAreas: React.FC = () => {
 
                   {/* Uploader */}
                   <SupabaseImageUploader
-                    onImageUpload={handleImageUpload}
+                    onImageUploaded={handleImageUpload}
                     currentImageUrl={formData.image_url}
-                    bucketName="area-images"
+                    folder="area-images"
                   />
                 </div>
 

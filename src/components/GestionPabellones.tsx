@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { IMAGE_CONFIG } from '../constants';
 
 interface Pabellon {
   id: number;
@@ -322,7 +323,7 @@ const GestionPabellones: React.FC = () => {
                       alt={pabellon.nombre}
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        e.currentTarget.src = 'https://via.placeholder.com/100?text=Sin+Imagen';
+                        e.currentTarget.src = IMAGE_CONFIG.PLACEHOLDER;
                       }}
                     />
                   </div>
@@ -478,7 +479,7 @@ const GestionPabellones: React.FC = () => {
                         alt="Vista previa"
                         className="w-32 h-32 object-cover rounded-lg"
                         onError={(e) => {
-                          e.currentTarget.src = 'https://via.placeholder.com/100?text=URL+inválida';
+                          e.currentTarget.src = IMAGE_CONFIG.ERROR_PLACEHOLDER;
                         }}
                       />
                     </div>

@@ -56,9 +56,12 @@ const GestionCamposArea: React.FC<Props> = ({ areaId, areaName, onClose }) => {
   const [selectionOptions, setSelectionOptions] = useState<SelectionOption[]>([]);
   const [optionGroups, setOptionGroups] = useState<string[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<string>('');
-  const [isOptionModalOpen, setIsOptionModalOpen] = useState(false);
-  const [newGroupName, setNewGroupName] = useState('');
   const [newSelectionOption, setNewSelectionOption] = useState({ label: '', value: '' });
+
+  // Silenciar warnings de variables no leídas pero necesarias para setters
+  void fieldOptions;
+  void newOption;
+  void optionGroups;
 
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -140,22 +143,6 @@ const GestionCamposArea: React.FC<Props> = ({ areaId, areaName, onClose }) => {
       }
     } catch (error) {
       console.error('Error al cargar opciones de selección:', error);
-    }
-  };
-
-  const loadFieldOptions = async (fieldId: number) => {
-    try {
-      const { data, error } = await supabase
-        .from('field_options')
-        .select('*')
-        .eq('field_id', fieldId)
-        .order('order_index', { ascending: true });
-
-      if (error) throw error;
-      setFieldOptions(data || []);
-    } catch (error) {
-      console.error('Error al cargar opciones:', error);
-      setFieldOptions([]);
     }
   };
 
@@ -276,57 +263,6 @@ const GestionCamposArea: React.FC<Props> = ({ areaId, areaName, onClose }) => {
     }
   };
 
-  const handleAddOption = () => {
-    if (!newOption.label.trim() || !newOption.value.trim()) {
-      setError('Debes completar la etiqueta y el valor de la opción');
-      setTimeout(() => setError(''), 3000);
-      return;
-    }
-
-    // Verificar que no exista ya una opción con el mismo valor
-    if (fieldOptions.some(opt => opt.option_value === newOption.value.trim())) {
-      setError('Ya existe una opción con ese valor');
-      setTimeout(() => setError(''), 3000);
-      return;
-    }
-
-    const newFieldOption: FieldOption = {
-      field_id: 0, // Se asignará al guardar
-      option_value: newOption.value.trim(),
-      option_label: newOption.label.trim(),
-      order_index: fieldOptions.length
-    };
-
-    setFieldOptions([...fieldOptions, newFieldOption]);
-    setNewOption({ label: '', value: '' });
-  };
-
-  const handleRemoveOption = (index: number) => {
-    const updated = fieldOptions.filter((_, i) => i !== index);
-    setFieldOptions(updated);
-  };
-
-  // Funciones para gestionar opciones de selección
-  const handleCreateGroup = async () => {
-    if (!newGroupName.trim()) {
-      setError('Debes ingresar un nombre para el grupo');
-      setTimeout(() => setError(''), 3000);
-      return;
-    }
-
-    if (optionGroups.includes(newGroupName.trim())) {
-      setError('Ya existe un grupo con ese nombre');
-      setTimeout(() => setError(''), 3000);
-      return;
-    }
-
-    setOptionGroups([...optionGroups, newGroupName.trim()]);
-    setSelectedGroup(newGroupName.trim());
-    setNewGroupName('');
-    setSuccess('Grupo creado correctamente');
-    setTimeout(() => setSuccess(''), 3000);
-  };
-
   const handleAddSelectionOption = async () => {
     if (!newSelectionOption.label.trim()) {
       setError('Debes ingresar una etiqueta para la opción');
@@ -388,38 +324,6 @@ const GestionCamposArea: React.FC<Props> = ({ areaId, areaName, onClose }) => {
     } catch (error: any) {
       console.error('Error:', error);
       setError(error.message || 'Error al eliminar la opción');
-      setTimeout(() => setError(''), 3000);
-    }
-  };
-
-  const handleDeleteGroup = async (groupName: string) => {
-    if (!window.confirm(`¿Eliminar el grupo "${groupName}" y todas sus opciones?`)) {
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('selection_options')
-        .delete()
-        .eq('area_id', areaId)
-        .eq('group_name', groupName);
-
-      if (error) throw error;
-
-      setSuccess('Grupo eliminado correctamente');
-      setTimeout(() => setSuccess(''), 3000);
-      await loadSelectionOptions();
-
-      // Seleccionar otro grupo si existe
-      const remainingGroups = optionGroups.filter(g => g !== groupName);
-      if (remainingGroups.length > 0) {
-        setSelectedGroup(remainingGroups[0]);
-      } else {
-        setSelectedGroup('');
-      }
-    } catch (error: any) {
-      console.error('Error:', error);
-      setError(error.message || 'Error al eliminar el grupo');
       setTimeout(() => setError(''), 3000);
     }
   };

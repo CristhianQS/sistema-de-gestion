@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { Area, DataAlumno, AreaField } from '../../../types';
-import { chatbotConfig, getMensaje, actualizarConfig } from '../config/chatbotPrompts';
+import { chatbotConfig, actualizarConfig } from '../config/chatbotPrompts';
 import * as OpenAIService from '../services/openai.service';
 import { getAllAreasUnpaginated } from '../../../services/database/areas.service';
 import { getAllPabellones, getSalonesByPabellon } from '../../../services/database/pabellones.service';
@@ -118,14 +118,6 @@ const ChatbotAsistente: React.FC = () => {
     }
   };
 
-  const loadSalonesByPabellon = async (pabellonId: number) => {
-    try {
-      const data = await getSalonesByPabellon(pabellonId);
-      setSalones(data);
-    } catch (error) {
-      console.error('Error al cargar salones:', error);
-    }
-  };
 
   const loadAreaFields = async (areaId: number) => {
     try {

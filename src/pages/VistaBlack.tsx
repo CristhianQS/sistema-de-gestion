@@ -9,6 +9,7 @@ import GestionAdminPlata from '../components/GestionAdminPlata';
 import ListaUsuariosAreas from '../components/ListaUsuariosAreas';
 import GestionDatosAlumnos from '../components/GestionDatosAlumnos';
 import AdminHeader from '../components/AdminHeader';
+import NotificationBell from '../components/notifications/NotificationBell';
 import NotificationPermissionBanner from '../components/notifications/NotificationPermissionBanner';
 
 const VistaBlack: React.FC = () => {

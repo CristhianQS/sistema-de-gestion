@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import VisualizarReportesOro from '../components/VisualizarReportesOro';
+import NotificationBell from '../components/notifications/NotificationBell';
+import NotificationPermissionBanner from '../components/notifications/NotificationPermissionBanner';
 
 const VistaOro: React.FC = () => {
   const { user, logout } = useAuth();
@@ -10,6 +12,7 @@ const VistaOro: React.FC = () => {
   if (currentView === 'mi_area') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-orange-100">
+        <NotificationPermissionBanner />
         <header className="bg-white shadow-md">
           <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
             <div className="flex items-center space-x-4">
@@ -29,12 +32,15 @@ const VistaOro: React.FC = () => {
                 <p className="text-sm text-gray-600">{user?.name || user?.email}</p>
               </div>
             </div>
-            <button
-              onClick={logout}
-              className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium"
-            >
-              Cerrar Sesión
-            </button>
+            <div className="flex items-center space-x-4">
+              {user?.email && <NotificationBell userEmail={user.email} />}
+              <button
+                onClick={logout}
+                className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium"
+              >
+                Cerrar Sesión
+              </button>
+            </div>
           </div>
         </header>
 
@@ -48,6 +54,7 @@ const VistaOro: React.FC = () => {
   // Dashboard principal
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-orange-100">
+      <NotificationPermissionBanner />
       <header className="bg-white shadow-md">
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center space-x-4">
@@ -59,12 +66,15 @@ const VistaOro: React.FC = () => {
               <p className="text-sm text-gray-600">{user?.name || user?.email}</p>
             </div>
           </div>
-          <button
-            onClick={logout}
-            className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium"
-          >
-            Cerrar Sesión
-          </button>
+          <div className="flex items-center space-x-4">
+            {user?.email && <NotificationBell userEmail={user.email} />}
+            <button
+              onClick={logout}
+              className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium"
+            >
+              Cerrar Sesión
+            </button>
+          </div>
         </div>
       </header>
 

@@ -25,7 +25,9 @@
       "Bash(node scripts/check-selection-options.js:*)",
       "Bash(node scripts/restore-dti-to-default.js:*)",
       "Bash(node scripts/check-area-structure.js:*)",
-      "Bash(node scripts/check-admins.js:*)"
+      "Bash(node scripts/check-admins.js:*)",
+      "Bash(ls:*)",
+      "Bash(tree:*)"
     ],
     "deny": [],
     "ask": []

@@ -22,13 +22,17 @@ CREATE TABLE IF NOT EXISTS public.administradores (
 -- Habilitar RLS
 ALTER TABLE public.administradores ENABLE ROW LEVEL SECURITY;
 
--- Política: Los administradores pueden ver y editar su propia información
-CREATE POLICY IF NOT EXISTS "Administradores pueden ver su info"
+-- Eliminar políticas si existen
+DROP POLICY IF EXISTS "Administradores pueden ver su info" ON public.administradores;
+DROP POLICY IF EXISTS "Super admins pueden gestionar" ON public.administradores;
+
+-- Crear políticas
+CREATE POLICY "Administradores pueden ver su info"
     ON public.administradores
     FOR SELECT
     USING (true);
 
-CREATE POLICY IF NOT EXISTS "Super admins pueden gestionar"
+CREATE POLICY "Super admins pueden gestionar"
     ON public.administradores
     FOR ALL
     USING (
@@ -93,24 +97,30 @@ CREATE INDEX IF NOT EXISTS idx_notifications_user_unread ON public.notifications
 -- Habilitar RLS
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 
--- Política: Los usuarios solo pueden ver sus propias notificaciones
-CREATE POLICY IF NOT EXISTS "Usuarios pueden ver sus notificaciones"
+-- Eliminar políticas si existen
+DROP POLICY IF EXISTS "Usuarios pueden ver sus notificaciones" ON public.notifications;
+DROP POLICY IF EXISTS "Usuarios pueden actualizar sus notificaciones" ON public.notifications;
+DROP POLICY IF EXISTS "Usuarios pueden eliminar sus notificaciones" ON public.notifications;
+DROP POLICY IF EXISTS "Sistema puede crear notificaciones" ON public.notifications;
+
+-- Crear políticas
+CREATE POLICY "Usuarios pueden ver sus notificaciones"
     ON public.notifications
     FOR SELECT
     USING (user_email = current_setting('request.jwt.claims', true)::json->>'email' OR user_email = current_user);
 
-CREATE POLICY IF NOT EXISTS "Usuarios pueden actualizar sus notificaciones"
+CREATE POLICY "Usuarios pueden actualizar sus notificaciones"
     ON public.notifications
     FOR UPDATE
     USING (user_email = current_setting('request.jwt.claims', true)::json->>'email' OR user_email = current_user);
 
-CREATE POLICY IF NOT EXISTS "Usuarios pueden eliminar sus notificaciones"
+CREATE POLICY "Usuarios pueden eliminar sus notificaciones"
     ON public.notifications
     FOR DELETE
     USING (user_email = current_setting('request.jwt.claims', true)::json->>'email' OR user_email = current_user);
 
 -- Política para que el sistema pueda crear notificaciones
-CREATE POLICY IF NOT EXISTS "Sistema puede crear notificaciones"
+CREATE POLICY "Sistema puede crear notificaciones"
     ON public.notifications
     FOR INSERT
     WITH CHECK (true);

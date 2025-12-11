@@ -8,6 +8,7 @@ import ChatbotAsistente from '../features/chatbot/components/ChatbotAsistente';
 import { useAuth } from '../context/AuthContext';
 import type { Area, DataAlumno } from '../lib/supabase';
 import { getAllAreasUnpaginated } from '../services/database';
+import { IMAGE_CONFIG } from '../constants';
 
 const PublicView: React.FC = () => {
   const [isModalLoginOpen, setIsModalLoginOpen] = useState(false);
@@ -144,11 +145,11 @@ const PublicView: React.FC = () => {
               >
                 <div className="h-48 overflow-hidden bg-gray-200">
                   <img
-                    src={area.image_url || 'https://via.placeholder.com/400x300?text=Sin+Imagen'}
+                    src={area.image_url || IMAGE_CONFIG.PLACEHOLDER}
                     alt={area.name}
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Error+al+cargar';
+                      e.currentTarget.src = IMAGE_CONFIG.ERROR_PLACEHOLDER;
                     }}
                   />
                 </div>

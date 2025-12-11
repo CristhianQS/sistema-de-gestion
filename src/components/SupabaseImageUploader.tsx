@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { useSupabaseUpload } from '../hooks/useSupabaseUpload';
+import { IMAGE_CONFIG } from '../constants';
 
 interface Props {
   currentImageUrl?: string;
@@ -86,7 +87,7 @@ const SupabaseImageUploader: React.FC<Props> = ({
             alt="Vista previa"
             className="w-full h-48 object-cover rounded-lg border-2 border-gray-600"
             onError={(e) => {
-              e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Error+al+cargar';
+              e.currentTarget.src = IMAGE_CONFIG.ERROR_PLACEHOLDER;
             }}
           />
           <button

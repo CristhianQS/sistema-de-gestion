@@ -115,6 +115,11 @@ const VisualizarReportes: React.FC = () => {
         .eq('id', reporteId);
 
       if (error) throw error;
+
+      // ✅ Marcar como revisado automáticamente al cambiar estado
+      const userEmail = user?.email || 'admin@upeu.edu.pe';
+      await markAsReviewed(reporteId, userEmail);
+
       await loadReportes();
     } catch (error) {
       console.error('Error al actualizar estado:', error);

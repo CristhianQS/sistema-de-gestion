@@ -37,16 +37,6 @@ const StudentReportsModal = ({ isOpen, onClose }: StudentReportsModalProps) => {
     setExpandedReport(expandedReport === reportId ? null : reportId);
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-PE', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
 
   if (!isOpen) return null;
 

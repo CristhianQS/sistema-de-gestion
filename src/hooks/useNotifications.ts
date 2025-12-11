@@ -14,6 +14,47 @@ interface UseNotificationsReturn {
 }
 
 /**
+ * Reproduce un sonido de notificación usando Web Audio API
+ */
+function playNotificationSound() {
+  try {
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+
+    // Crear oscilador para el sonido
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    // Configurar sonido: dos tonos cortos (ding-ding)
+    oscillator.frequency.value = 800; // Frecuencia en Hz
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.1);
+
+    // Segundo tono
+    const oscillator2 = audioContext.createOscillator();
+    const gainNode2 = audioContext.createGain();
+
+    oscillator2.connect(gainNode2);
+    gainNode2.connect(audioContext.destination);
+
+    oscillator2.frequency.value = 1000;
+    gainNode2.gain.setValueAtTime(0.3, audioContext.currentTime + 0.15);
+    gainNode2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.25);
+
+    oscillator2.start(audioContext.currentTime + 0.15);
+    oscillator2.stop(audioContext.currentTime + 0.25);
+  } catch (err) {
+    // Si falla, intentar con un beep simple del navegador
+    console.log('🔔 Nueva notificación!');
+  }
+}
+
+/**
  * Hook personalizado para gestionar notificaciones
  * @param userEmail - Email del usuario actual
  */
@@ -131,7 +172,7 @@ export function useNotifications(userEmail: string | null): UseNotificationsRetu
 
         // Mostrar notificación push del navegador
         if ('Notification' in window && Notification.permission === 'granted') {
-          new Notification(newNotification.title, {
+          const notification = new Notification(newNotification.title, {
             body: newNotification.message,
             icon: '/logo.png',
             badge: '/logo.png',
@@ -139,17 +180,15 @@ export function useNotifications(userEmail: string | null): UseNotificationsRetu
             requireInteraction: false,
             silent: false
           });
-        }
 
-        // Reproducir sonido (opcional)
-        try {
-          const audio = new Audio('/notification-sound.mp3');
-          audio.volume = 0.5;
-          audio.play().catch(() => {
-            // Ignorar si no se puede reproducir
-          });
-        } catch (err) {
-          // Ignorar error de audio
+          // Reproducir sonido de notificación
+          playNotificationSound();
+
+          // Auto-cerrar después de 5 segundos
+          setTimeout(() => notification.close(), 5000);
+        } else {
+          // Si no hay permisos, solo reproducir el sonido
+          playNotificationSound();
         }
       }
     );

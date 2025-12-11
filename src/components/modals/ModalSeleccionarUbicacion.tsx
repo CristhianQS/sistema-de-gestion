@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
+import { IMAGE_CONFIG } from '../../constants';
 
 interface Pabellon {
   id: number;
@@ -152,11 +153,11 @@ const ModalSeleccionarUbicacion: React.FC<Props> = ({ isOpen, onClose, onSelect 
                         {/* Imagen */}
                         <div className="h-48 bg-gray-200 overflow-hidden">
                           <img
-                            src={pabellon.imagen_url || 'https://via.placeholder.com/400x300?text=Sin+Imagen'}
+                            src={pabellon.imagen_url || IMAGE_CONFIG.PLACEHOLDER}
                             alt={pabellon.nombre}
                             className="w-full h-full object-cover"
                             onError={(e) => {
-                              e.currentTarget.src = 'https://via.placeholder.com/400x300?text=Sin+Imagen';
+                              e.currentTarget.src = IMAGE_CONFIG.PLACEHOLDER;
                             }}
                           />
                         </div>

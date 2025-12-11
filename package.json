@@ -10,11 +10,16 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage"
+    "test:coverage": "vitest --coverage",
+    "check:deployment": "bash scripts/check-deployment.sh",
+    "deploy:vercel": "bash scripts/deploy-vercel.sh --prod",
+    "deploy:netlify": "bash scripts/deploy-netlify.sh --prod",
+    "deploy:docker": "bash scripts/deploy-docker.sh"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.80.0",
     "@tanstack/react-query": "^5.90.12",
+    "date-fns": "^4.1.0",
     "lucide-react": "^0.555.0",
     "openai": "^4.73.0",
     "react": "^19.1.1",
