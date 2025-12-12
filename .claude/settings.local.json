@@ -27,7 +27,8 @@
       "Bash(node scripts/check-area-structure.js:*)",
       "Bash(node scripts/check-admins.js:*)",
       "Bash(ls:*)",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

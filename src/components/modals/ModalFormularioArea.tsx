@@ -182,6 +182,7 @@ const ModalFormularioArea: React.FC<Props> = ({ isOpen, onClose, areaId, areaNam
           alumno_dni: docenteData.dni || '',
           alumno_codigo: 0,
           alumno_nombre: `${docenteData.nombres} ${docenteData.apellidos}`,
+          submitted_at: new Date().toISOString(),
           form_data: completeFormData,
           status: 'pending' as const
         };
@@ -203,6 +204,7 @@ const ModalFormularioArea: React.FC<Props> = ({ isOpen, onClose, areaId, areaNam
           alumno_dni: alumnoData.dni || '',
           alumno_codigo: alumnoData.codigo || 0,
           alumno_nombre: alumnoData.estudiante || '',
+          submitted_at: new Date().toISOString(),
           form_data: completeFormData,
           status: 'pending'
         };
