@@ -5,6 +5,8 @@ import * as OpenAIService from '../services/openai.service';
 import { getAllAreasUnpaginated } from '../../../services/database/areas.service';
 import { getAllPabellones, getSalonesByPabellon } from '../../../services/database/pabellones.service';
 import { getStudentByCode } from '../../../services/database/students.service';
+import { getDocenteByDni } from '../../../services/database/docentes.service';
+import type { Docente } from '../../../services/database/docentes.service';
 import { createSubmission } from '../../../services/database/submissions.service';
 import { loadChatbotConfig } from '../../../services/database/chatbot-config.service';
 import { getAllAreaFields } from '../../../services/database/area-fields.service';
@@ -21,6 +23,8 @@ interface Message {
 interface ConversationState {
   step: 'greeting' | 'waiting_code' | 'waiting_problem' | 'waiting_area' | 'waiting_pabellon' | 'waiting_salon' | 'waiting_description' | 'waiting_images' | 'waiting_location' | 'waiting_confirmation' | 'completed';
   alumno: DataAlumno | null;
+  docente: Docente | null;
+  isDocente: boolean;
   selectedArea: Area | null;
   description: string;
   location: string;
@@ -39,6 +43,8 @@ const ChatbotAsistente: React.FC = () => {
   const [conversationState, setConversationState] = useState<ConversationState>({
     step: 'greeting',
     alumno: null,
+    docente: null,
+    isDocente: false,
     selectedArea: null,
     description: '',
     location: ''
@@ -177,20 +183,23 @@ const ChatbotAsistente: React.FC = () => {
   };
 
   const crearReporte = async () => {
-    const { alumno, selectedArea, description, location, problemaDetectado, selectedPabellon, selectedSalon } = conversationState;
+    const { alumno, docente, isDocente, selectedArea, description, location, problemaDetectado, selectedPabellon, selectedSalon } = conversationState;
 
-    if (!alumno || !selectedArea) {
+    // Validar que tengamos datos suficientes
+    if ((!alumno && !docente) || !selectedArea) {
       addBotMessage('Error: Faltan datos para crear el reporte.');
       return;
     }
 
     try {
+      // Preparar datos según si es docente o estudiante
       const reporteData = {
         area_id: selectedArea.id,
-        alumno_id: alumno.id,
-        alumno_dni: alumno.dni || '',
-        alumno_codigo: alumno.codigo || 0,
-        alumno_nombre: alumno.estudiante || '',
+        alumno_id: isDocente ? null : (alumno?.id || null),
+        alumno_dni: isDocente ? (docente?.dni || '') : (alumno?.dni || ''),
+        alumno_codigo: isDocente ? 0 : (alumno?.codigo || 0),
+        alumno_nombre: isDocente ? `${docente?.nombres} ${docente?.apellidos}` : (alumno?.estudiante || ''),
+        es_docente: isDocente,
         submitted_at: new Date().toISOString(),
         form_data: {
           descripcion: description,
@@ -210,7 +219,8 @@ const ChatbotAsistente: React.FC = () => {
             urgencia: problemaDetectado?.urgencia || 'media',
             detalles_adicionales: problemaDetectado?.detallesAdicionales || {},
             mensaje_original: problemaDetectado?.mensajeOriginal || description,
-            deteccion_automatica: !!problemaDetectado
+            deteccion_automatica: !!problemaDetectado,
+            es_docente: isDocente
           }
         },
         status: 'pending' as const
@@ -218,12 +228,20 @@ const ChatbotAsistente: React.FC = () => {
 
       const data = await createSubmission(reporteData);
 
-      addBotMessage(chatbotConfig.confirmaciones.reporteCreado(data.id, selectedArea.name));
+      const tipoUsuario = isDocente ? 'docente' : 'estudiante';
+      addBotMessage(
+        `✅ ¡Reporte #${data.id} creado exitosamente!\n\n` +
+        `📋 **Área:** ${selectedArea.name}\n` +
+        `👤 **Tipo:** ${tipoUsuario.charAt(0).toUpperCase() + tipoUsuario.slice(1)}\n\n` +
+        `Gracias por tu reporte. Nuestro equipo lo atenderá pronto. 🚀`
+      );
 
       // Resetear conversación
       setConversationState({
         step: 'waiting_code',
         alumno: null,
+        docente: null,
+        isDocente: false,
         selectedArea: null,
         description: '',
         location: ''
@@ -301,32 +319,58 @@ const ChatbotAsistente: React.FC = () => {
       }
 
       // Si no hay IA o hubo error, usar mensaje estándar
-      addBotMessage('¡Hola! 😊 Para poder ayudarte, necesito que me proporciones tu código de estudiante.');
+      addBotMessage('¡Hola! 😊 Para poder ayudarte, necesito que me proporciones tu código de estudiante o DNI (si eres docente).');
       return;
     }
 
-    // Es un código numérico - procesarlo
+    // Es un código numérico - determinar si es DNI (8 dígitos) o código de estudiante
+    const codigo = mensaje.trim();
     setIsTyping(true);
-    const alumno = await buscarAlumnoPorCodigo(mensaje);
+
+    // Si tiene 8 dígitos, intentar buscar como docente primero
+    if (codigo.length === 8) {
+      try {
+        const docente = await getDocenteByDni(codigo);
+        setIsTyping(false);
+
+        if (docente) {
+          // Es un docente
+          setConversationState({
+            ...conversationState,
+            step: 'waiting_problem',
+            docente,
+            isDocente: true
+          });
+
+          addBotMessage(`¡Hola Docente ${docente.nombres} ${docente.apellidos}! 👨‍🏫 ¿En qué puedo ayudarte hoy?`);
+          return;
+        }
+      } catch (error) {
+        console.error('Error al buscar docente:', error);
+      }
+    }
+
+    // Si no es docente o tiene más/menos de 8 dígitos, buscar como estudiante
+    const alumno = await buscarAlumnoPorCodigo(codigo);
     setIsTyping(false);
 
     if (!alumno) {
       if (aiEnabled) {
-        addBotMessage(`No encontré el código ${mensaje}. ¿Podrías verificarlo?`);
+        addBotMessage(`No encontré el código/DNI ${codigo}. ¿Podrías verificarlo?`);
       } else {
-        addBotMessage(chatbotConfig.mensajes.codigoNoEncontrado);
+        addBotMessage('No encontré ese código de estudiante o DNI. Por favor, verifica e intenta nuevamente.');
       }
       return;
     }
 
-    // Cambiar al paso de esperar problema
+    // Es un estudiante
     setConversationState({
       ...conversationState,
       step: 'waiting_problem',
-      alumno
+      alumno,
+      isDocente: false
     });
 
-    // Saludo corto y pregunta directa
     addBotMessage(`¡Hola ${alumno.estudiante}! 😊 ¿Tienes algún inconveniente?`);
   };
 
@@ -617,7 +661,8 @@ const ChatbotAsistente: React.FC = () => {
         selectedArea: null,
         description: '',
         location: '',
-        problemaDetectado: undefined
+        problemaDetectado: undefined,
+        uploadedImages: {}
       });
 
       addBotMessage('Entendido. Por favor, descríbeme nuevamente tu problema con más detalles.');

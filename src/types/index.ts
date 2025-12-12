@@ -62,7 +62,7 @@ export interface DataAlumno {
 export interface AreaSubmission {
   id: number;
   area_id: number;
-  alumno_id: number;
+  alumno_id: number | null; // Puede ser null cuando es_docente = true
   alumno_dni: string;
   alumno_codigo: number;
   alumno_nombre: string;

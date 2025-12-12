@@ -9,7 +9,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 async function checkAdmins() {
   console.log('🔍 Buscando tabla de administradores...\n');
 
-  const tables = ['administradores', 'admins', 'admin', 'administrador', 'data_users'];
+  const tables = ['admin_user', 'administradores', 'admins', 'admin', 'administrador', 'data_users'];
 
   for (const table of tables) {
     console.log(`Probando tabla: ${table}`);
