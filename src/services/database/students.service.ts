@@ -17,27 +17,30 @@ export async function getAllStudents(
   const { page = 1, pageSize = DEFAULT_PAGE_SIZE } = params || {};
   const { from, to } = toPaginationRange({ page, pageSize });
 
-  // Obtener el conteo total
-  const { count, error: countError } = await supabase
-    .from('data_alumnos')
-    .select('*', { count: 'exact', head: true });
+  const params2 = new URLSearchParams({
+    start: String(from),
+    end: String(to),
+  });
 
-  if (countError) {
-    console.error('Error al contar estudiantes:', countError);
-    throw countError;
+  // Obtener el conteo total
+  var res = await fetch(`http://localhost:4000/estudiantes/conteo`);
+
+  if (!res.ok) {
+    console.error('Error al contar estudiantes');
+    throw new Error('Error al contar estudiantes');
   }
+
+  const count = await res.json();
 
   // Obtener los datos paginados
-  const { data, error } = await supabase
-    .from('data_alumnos')
-    .select('*')
-    .order('estudiante', { ascending: true })
-    .range(from, to);
+  res = await fetch(`http://localhost:4000/estudiantes/listapag?${params2}`);
 
-  if (error) {
-    console.error('Error al obtener estudiantes:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al obtener estudiantes');
+    throw new Error('Error al obtener estudiantes');
   }
+
+  const data = await res.json();
 
   return createPaginationResult(data || [], count || 0, { page, pageSize });
 }
@@ -47,15 +50,14 @@ export async function getAllStudents(
  * @deprecated Usar getAllStudents con parámetros de paginación
  */
 export async function getAllStudentsUnpaginated(): Promise<DataAlumno[]> {
-  const { data, error } = await supabase
-    .from('data_alumnos')
-    .select('*')
-    .order('estudiante', { ascending: true });
+  const res = await fetch('http://localhost:4000/alumnos/lista');
 
-  if (error) {
-    console.error('Error al obtener estudiantes:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al obtener estudiantes');
+    throw new Error('Error al obtener estudiantes');
   }
+
+  const data = await res.json();
 
   return data || [];
 }

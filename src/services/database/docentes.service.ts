@@ -1,4 +1,4 @@
-import { supabase } from '../../lib/supabase';
+//import { supabase } from '../../lib/supabase';
 
 export interface Docente {
   id?: number;
@@ -23,46 +23,36 @@ export async function getAllDocentes(
   pageSize: number = 50,
   searchTerm?: string
 ): Promise<{ data: Docente[]; count: number }> {
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
+  const params = new URLSearchParams({
+    page: String(page),
+    pagesize: String(pageSize),
+    search: String(searchTerm? searchTerm : null)
+  });
+  const res = await fetch(`http://localhost:4000/docentes/filtrar?${params}`);
+  //const res = await fetch(`http://localhost:4000/docentes/buscar?page=${page}&pagesize=${pageSize}&search=${searchTerm}`);
 
-  let query = supabase
-    .from('docentes')
-    .select('*', { count: 'exact' })
-    .order('apellidos', { ascending: true })
-    .order('nombres', { ascending: true });
-
-  // Búsqueda por término
-  if (searchTerm && searchTerm.trim()) {
-    query = query.or(
-      `nombres.ilike.%${searchTerm}%,apellidos.ilike.%${searchTerm}%,dni.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`
-    );
+  if (!res.ok) {
+    console.error('Error al obtener docentes');
+    throw new Error('Error al obtener docentes');
   }
 
-  const { data, error, count } = await query.range(from, to);
+  const data = await res.json();
 
-  if (error) {
-    console.error('Error al obtener docentes:', error);
-    throw error;
-  }
-
-  return { data: data || [], count: count || 0 };
+  return { data: data.data || [], count: data.count || 0 };
 }
 
 /**
  * Obtener todos los docentes sin paginación (para exportar)
  */
 export async function getAllDocentesUnpaginated(): Promise<Docente[]> {
-  const { data, error } = await supabase
-    .from('docentes')
-    .select('*')
-    .order('apellidos', { ascending: true })
-    .order('nombres', { ascending: true });
+  const res = await fetch('http://localhost:4000/docentes/lista');
 
-  if (error) {
-    console.error('Error al obtener docentes:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al obtener docentes');
+    throw new Error('Error al obtener docentes');
   }
+
+  const data = await res.json();
 
   return data || [];
 }
@@ -71,19 +61,17 @@ export async function getAllDocentesUnpaginated(): Promise<Docente[]> {
  * Obtener docente por DNI
  */
 export async function getDocenteByDni(dni: string): Promise<Docente | null> {
-  const { data, error } = await supabase
-    .from('docentes')
-    .select('*')
-    .eq('dni', dni)
-    .single();
+  const params = new URLSearchParams({
+    dni,
+  });
+  const res = await fetch(`http://localhost:4000/docentes/buscar?${params}`);
 
-  if (error) {
-    if (error.code === 'PGRST116') {
-      return null; // No encontrado
-    }
-    console.error('Error al buscar docente:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al buscar docente');
+    throw new Error('Error al buscar docente');
   }
+
+  const data = await res.json();
 
   return data;
 }
@@ -92,19 +80,17 @@ export async function getDocenteByDni(dni: string): Promise<Docente | null> {
  * Obtener docente por ID
  */
 export async function getDocenteById(id: number): Promise<Docente | null> {
-  const { data, error } = await supabase
-    .from('docentes')
-    .select('*')
-    .eq('id', id)
-    .single();
+  const params = new URLSearchParams({
+    id: String(id),
+  });
+  const res = await fetch(`http://localhost:4000/docentes/buscar?${params}`);
 
-  if (error) {
-    if (error.code === 'PGRST116') {
-      return null;
-    }
-    console.error('Error al buscar docente:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al buscar docente');
+    throw new Error('Error al buscar docente');
   }
+
+  const data = await res.json();
 
   return data;
 }
@@ -113,16 +99,17 @@ export async function getDocenteById(id: number): Promise<Docente | null> {
  * Crear un nuevo docente
  */
 export async function createDocente(docente: Omit<Docente, 'id' | 'created_at' | 'updated_at'>): Promise<Docente> {
-  const { data, error } = await supabase
-    .from('docentes')
-    .insert([docente])
-    .select()
-    .single();
-
-  if (error) {
-    console.error('Error al crear docente:', error);
-    throw error;
+  const res = await fetch('http://localhost:4000/docentes/nuevo', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(docente),
+  });
+if (!res.ok) {
+    console.error('Error al crear docente');
+    throw new Error('Error al crear docente');
   }
+
+  const data = await res.json();
 
   return data;
 }
@@ -131,17 +118,17 @@ export async function createDocente(docente: Omit<Docente, 'id' | 'created_at' |
  * Actualizar un docente existente
  */
 export async function updateDocente(id: number, docente: Partial<Docente>): Promise<Docente> {
-  const { data, error } = await supabase
-    .from('docentes')
-    .update(docente)
-    .eq('id', id)
-    .select()
-    .single();
+  const res = await fetch(`http://localhost:4000/docentes/editar/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(docente),
+  });
 
-  if (error) {
-    console.error('Error al actualizar docente:', error);
-    throw error;
+  if (!res.ok) {
+    throw new Error('Error al actualizar docente');
   }
+
+  const data = await res.json();
 
   return data;
 }
@@ -150,14 +137,11 @@ export async function updateDocente(id: number, docente: Partial<Docente>): Prom
  * Eliminar un docente
  */
 export async function deleteDocente(id: number): Promise<void> {
-  const { error } = await supabase
-    .from('docentes')
-    .delete()
-    .eq('id', id);
+  const res = await fetch(`http://localhost:4000/docentes/borrar/${id}`);
 
-  if (error) {
-    console.error('Error al eliminar docente:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al eliminar docente');
+    throw new Error('Error al eliminar docente');
   }
 }
 
@@ -204,14 +188,17 @@ export async function importDocentes(docentes: Omit<Docente, 'id' | 'created_at'
  * Buscar docentes por nombre
  */
 export async function searchDocentes(searchTerm: string): Promise<Docente[]> {
-  const { data, error } = await supabase.rpc('search_docentes', {
-    search_term: searchTerm
+  const params = new URLSearchParams({
+    search: String(searchTerm)
   });
-
-  if (error) {
-    console.error('Error al buscar docentes:', error);
-    throw error;
+  const res = await fetch(`http://localhost:4000/docentes/filtrar?${params}`);
+  
+  if (!res.ok) {
+    console.error('Error al buscar docentes');
+    throw new Error('Error al buscar docentes');
   }
+
+  const data = await res.json();
 
   return data || [];
 }
@@ -220,14 +207,17 @@ export async function searchDocentes(searchTerm: string): Promise<Docente[]> {
  * Obtener docentes por estado
  */
 export async function getDocentesByEstado(estado: 'activo' | 'inactivo' | 'licencia' = 'activo'): Promise<Docente[]> {
-  const { data, error } = await supabase.rpc('get_docentes_by_estado', {
-    p_estado: estado
+  const params = new URLSearchParams({
+    estado,
   });
+  const res = await fetch(`http://localhost:4000/docentes/buscar?${params}`);
 
-  if (error) {
-    console.error('Error al obtener docentes por estado:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al buscar docente por estado');
+    throw new Error('Error al buscar docente por estado');
   }
+
+  const data = await res.json();
 
   return data || [];
 }
@@ -241,14 +231,14 @@ export async function getDocentesStats(): Promise<{
   inactivos: number;
   licencia: number;
 }> {
-  const { data, error } = await supabase
-    .from('docentes')
-    .select('estado');
+  const res = await fetch(`http://localhost:4000/docentes/estados`);
 
-  if (error) {
-    console.error('Error al obtener estadísticas:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al obtener estadísticas');
+    throw new Error('Error al obtener estadísticas');
   }
+
+  const data: [{estado: any}] = await res.json();
 
   const stats = {
     total: data?.length || 0,

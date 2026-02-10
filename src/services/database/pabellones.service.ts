@@ -1,4 +1,4 @@
-import { supabase } from '../../lib/supabase';
+//import { supabase } from '../../lib/supabase';
 
 /**
  * Servicio de acceso a datos para Pabellones y Salones
@@ -31,15 +31,14 @@ export interface Salon {
  * Obtener todos los pabellones
  */
 export async function getAllPabellones(): Promise<Pabellon[]> {
-  const { data, error } = await supabase
-    .from('pabellones')
-    .select('*')
-    .order('nombre', { ascending: true });
+  const res = await fetch('http://localhost:4000/pabellones/lista');
 
-  if (error) {
-    console.error('Error al obtener pabellones:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al obtener pabellones');
+    throw new Error('Error al obtener pabellones');
   }
+
+  const data = await res.json();
 
   return data || [];
 }
@@ -48,19 +47,14 @@ export async function getAllPabellones(): Promise<Pabellon[]> {
  * Obtener pabellón por ID
  */
 export async function getPabellonById(id: number): Promise<Pabellon | null> {
-  const { data, error } = await supabase
-    .from('pabellones')
-    .select('*')
-    .eq('id', id)
-    .single();
+  const res = await fetch(`http://localhost:4000/pabellones/buscar/${id}`);
 
-  if (error) {
-    if (error.code === 'PGRST116') {
-      return null;
-    }
-    console.error('Error al obtener pabellón:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al obtener pabellón');
+    throw new Error('Error al obtener pabellón');
   }
+
+  const data = await res.json();
 
   return data;
 }
@@ -69,16 +63,18 @@ export async function getPabellonById(id: number): Promise<Pabellon | null> {
  * Crear nuevo pabellón
  */
 export async function createPabellon(pabellon: Omit<Pabellon, 'id' | 'created_at'>): Promise<Pabellon> {
-  const { data, error } = await supabase
-    .from('pabellones')
-    .insert([pabellon])
-    .select()
-    .single();
+  const res = await fetch(`http://localhost:4000/pabellones/nuevo`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(pabellon),
+  });
 
-  if (error) {
-    console.error('Error al crear pabellón:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al crear pabellón');
+    throw new Error('Error al crear pabellón');
   }
+
+  const data = await res.json();
 
   return data;
 }
@@ -90,17 +86,18 @@ export async function updatePabellon(
   id: number,
   updates: Partial<Omit<Pabellon, 'id' | 'created_at'>>
 ): Promise<Pabellon> {
-  const { data, error } = await supabase
-    .from('pabellones')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
+  const res = await fetch(`http://localhost:4000/pabellones/editar/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  });
 
-  if (error) {
-    console.error('Error al actualizar pabellón:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al actualizar pabellón');
+    throw new Error('Error al actualizar pabellón');
   }
+
+  const data = await res.json();
 
   return data;
 }
@@ -109,14 +106,11 @@ export async function updatePabellon(
  * Eliminar pabellón
  */
 export async function deletePabellon(id: number): Promise<void> {
-  const { error } = await supabase
-    .from('pabellones')
-    .delete()
-    .eq('id', id);
+  const res = await fetch(`http://localhost:4000/pabellon/borrar/${id}`);
 
-  if (error) {
-    console.error('Error al eliminar pabellón:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al eliminar pabellón');
+    throw new Error('Error al eliminar pabellón');
   }
 }
 
@@ -128,18 +122,14 @@ export async function deletePabellon(id: number): Promise<void> {
  * Obtener todos los salones con información del pabellón
  */
 export async function getAllSalones(): Promise<Salon[]> {
-  const { data, error } = await supabase
-    .from('salones')
-    .select(`
-      *,
-      pabellon:pabellones(id, nombre, descripcion)
-    `)
-    .order('nombre', { ascending: true });
+  const res = await fetch(`http://localhost:4000/salones/lista`);
 
-  if (error) {
-    console.error('Error al obtener salones:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al obtener salones');
+    throw new Error('Error al obtener salones');
   }
+
+  const data = await res.json();
 
   return data || [];
 }
@@ -149,19 +139,14 @@ export async function getAllSalones(): Promise<Salon[]> {
  * Esta es la función más usada en el chatbot
  */
 export async function getSalonesByPabellon(pabellonId: number): Promise<Salon[]> {
-  const { data, error } = await supabase
-    .from('salones')
-    .select(`
-      *,
-      pabellon:pabellones(id, nombre, descripcion)
-    `)
-    .eq('pabellon_id', pabellonId)
-    .order('nombre', { ascending: true });
+  const res = await fetch(`http://localhost:4000/salones/filtrar?pabId=${pabellonId}`);
 
-  if (error) {
-    console.error('Error al obtener salones del pabellón:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al obtener salones del pabellón');
+    throw new Error('Error al obtener salones del pabellón');
   }
+
+  const data = await res.json();
 
   return data || [];
 }
@@ -170,22 +155,14 @@ export async function getSalonesByPabellon(pabellonId: number): Promise<Salon[]>
  * Obtener salón por ID
  */
 export async function getSalonById(id: number): Promise<Salon | null> {
-  const { data, error } = await supabase
-    .from('salones')
-    .select(`
-      *,
-      pabellon:pabellones(id, nombre, descripcion)
-    `)
-    .eq('id', id)
-    .single();
+  const res = await fetch(`http://localhost:4000/salones/buscar/${id}`);
 
-  if (error) {
-    if (error.code === 'PGRST116') {
-      return null;
-    }
-    console.error('Error al obtener salón:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al obtener salón');
+    throw new Error('Error al obtener salón');
   }
+
+  const data = await res.json();
 
   return data;
 }
@@ -194,19 +171,18 @@ export async function getSalonById(id: number): Promise<Salon | null> {
  * Crear nuevo salón
  */
 export async function createSalon(salon: Omit<Salon, 'id' | 'created_at' | 'pabellon'>): Promise<Salon> {
-  const { data, error } = await supabase
-    .from('salones')
-    .insert([salon])
-    .select(`
-      *,
-      pabellon:pabellones(id, nombre, descripcion)
-    `)
-    .single();
+  const res = await fetch(`http://localhost:4000/salones/nuevo`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(salon),
+  });
 
-  if (error) {
-    console.error('Error al crear salón:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al crear salón');
+    throw new Error('Error al crear salón');
   }
+
+  const data = await res.json();
 
   return data;
 }
@@ -218,20 +194,18 @@ export async function updateSalon(
   id: number,
   updates: Partial<Omit<Salon, 'id' | 'created_at' | 'pabellon'>>
 ): Promise<Salon> {
-  const { data, error } = await supabase
-    .from('salones')
-    .update(updates)
-    .eq('id', id)
-    .select(`
-      *,
-      pabellon:pabellones(id, nombre, descripcion)
-    `)
-    .single();
+  const res = await fetch(`http://localhost:4000/salones/editar/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  });
 
-  if (error) {
-    console.error('Error al actualizar salón:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al actualizar salón');
+    throw new Error('Error al actualizar salón');
   }
+
+  const data = await res.json();
 
   return data;
 }
@@ -240,14 +214,11 @@ export async function updateSalon(
  * Eliminar salón
  */
 export async function deleteSalon(id: number): Promise<void> {
-  const { error } = await supabase
-    .from('salones')
-    .delete()
-    .eq('id', id);
+  const res = await fetch(`http://localhost:4000/salones/borrar/${id}`);
 
-  if (error) {
-    console.error('Error al eliminar salón:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al eliminar salón');
+    throw new Error('Error al eliminar salón');
   }
 }
 
@@ -255,15 +226,14 @@ export async function deleteSalon(id: number): Promise<void> {
  * Contar salones por pabellón
  */
 export async function countSalonesByPabellon(pabellonId: number): Promise<number> {
-  const { count, error } = await supabase
-    .from('salones')
-    .select('*', { count: 'exact', head: true })
-    .eq('pabellon_id', pabellonId);
+  const res = await fetch(`http://localhost:4000/salones/conteo/${pabellonId}`);
 
-  if (error) {
-    console.error('Error al contar salones:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al contar salones');
+    throw new Error('Error al contar salones');
   }
+
+  const count = await res.json();
 
   return count || 0;
 }

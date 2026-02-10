@@ -35,12 +35,10 @@ const GestionAreas: React.FC = () => {
 
   const loadAreas = async () => {
     try {
-      const { data, error } = await supabase
-        .from('areas')
-        .select('*')
-        .order('name', { ascending: true });
+      const res = await fetch(`http://localhost:4000/areas`);
 
-      if (error) throw error;
+      if (!res.ok) throw error;
+      const data = await res.json();
       setAreas(data || []);
     } catch (error) {
       console.error('Error al cargar áreas:', error);

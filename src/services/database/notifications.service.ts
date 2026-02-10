@@ -23,20 +23,13 @@ export interface Notification {
  * Obtener todas las notificaciones de un usuario
  */
 export async function getNotifications(userEmail: string): Promise<Notification[]> {
-  const { data, error } = await supabase
-    .from('notifications')
-    .select(`
-      *,
-      area:areas(name),
-      submission:area_submissions(alumno_nombre, alumno_codigo, status)
-    `)
-    .eq('user_email', userEmail)
-    .order('created_at', { ascending: false });
+  const res = await fetch(`http://localhost:4000/notificaciones/filtrar?email=${encodeURIComponent(userEmail)}`);
 
-  if (error) {
-    console.error('Error al obtener notificaciones:', error);
-    throw error;
+  if (!res.ok) {
+    throw new Error('Error al obtener notificaciones');
   }
+
+  const data: [any] = await res.json();
 
   // Mapear los datos con joins
   return (data || []).map(n => ({
@@ -52,21 +45,13 @@ export async function getNotifications(userEmail: string): Promise<Notification[
  * Obtener solo notificaciones no leídas
  */
 export async function getUnreadNotifications(userEmail: string): Promise<Notification[]> {
-  const { data, error } = await supabase
-    .from('notifications')
-    .select(`
-      *,
-      area:areas(name),
-      submission:area_submissions(alumno_nombre, alumno_codigo, status)
-    `)
-    .eq('user_email', userEmail)
-    .eq('read', false)
-    .order('created_at', { ascending: false });
+  const res = await fetch(`http://localhost:4000/notificaciones/noleidas?email=${encodeURIComponent(userEmail)}`);
 
-  if (error) {
-    console.error('Error al obtener notificaciones no leídas:', error);
-    throw error;
+  if (!res.ok) {
+    throw new Error('Error al obtener notificaciones no leídas');
   }
+
+  const data: [any] = await res.json();
 
   // Mapear los datos con joins
   return (data || []).map(n => ({
@@ -82,16 +67,13 @@ export async function getUnreadNotifications(userEmail: string): Promise<Notific
  * Contar notificaciones no leídas
  */
 export async function getUnreadCount(userEmail: string): Promise<number> {
-  const { count, error } = await supabase
-    .from('notifications')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_email', userEmail)
-    .eq('read', false);
+  const res = await fetch(`http://localhost:4000/notificaciones/conteo?email=${encodeURIComponent(userEmail)}`);
 
-  if (error) {
-    console.error('Error al contar notificaciones:', error);
-    return 0;
+  if (!res.ok) {
+    throw new Error('Error al contar notificaciones');
   }
+
+  const count = await res.json();
 
   return count || 0;
 }
@@ -165,14 +147,11 @@ export function subscribeToNotifications(
  * Eliminar una notificación
  */
 export async function deleteNotification(notificationId: number): Promise<void> {
-  const { error } = await supabase
-    .from('notifications')
-    .delete()
-    .eq('id', notificationId);
+  const res = await fetch(`http://localhost:4000/notificaciones/borrar/${notificationId}`);
 
-  if (error) {
-    console.error('Error al eliminar notificación:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al eliminar notificación');
+    throw new Error('Error al eliminar notificación');
   }
 }
 
@@ -188,20 +167,24 @@ export async function createNotification(notification: {
   related_submission_id?: number;
   related_area_id?: number;
 }): Promise<void> {
-  const { error } = await supabase.from('notifications').insert([
-    {
-      user_email: notification.user_email,
-      user_name: notification.user_name,
-      title: notification.title,
-      message: notification.message,
-      type: notification.type || 'info',
-      related_submission_id: notification.related_submission_id,
-      related_area_id: notification.related_area_id
-    }
-  ]);
+  const newNoti = {
+    user_email: notification.user_email,
+    user_name: notification.user_name,
+    title: notification.title,
+    message: notification.message,
+    type: notification.type || 'info',
+    related_submission_id: notification.related_submission_id,
+    related_area_id: notification.related_area_id
+  };
 
-  if (error) {
-    console.error('Error al crear notificación:', error);
-    throw error;
+  const res = await fetch('http://localhost:4000/notificaciones/nuevo', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(newNoti),
+  });
+
+  if (!res.ok) {
+    console.error('Error al crear notificación');
+    throw new Error('Error al crear notificación');
   }
 }

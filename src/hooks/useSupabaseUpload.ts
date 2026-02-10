@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { supabase } from '../lib/supabase';
+//import { supabase } from '../lib/supabase';
 
 interface UploadOptions {
   folder?: string;
@@ -37,32 +37,32 @@ export const useSupabaseUpload = () => {
       const fileExt = file.name.split('.').pop();
       const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
       const filePath = `${folder}/${fileName}`;
+      console.log(filePath); // <-- For error skipping
 
+      const formData = new FormData();
+      formData.append('image', file);
+      
       setUploadProgress(30);
 
       // Subir archivo
-      const { error: uploadError } = await supabase.storage
-        .from('images')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false,
-        });
+      const res = await fetch('http://localhost:4000/uploads', {
+        method: 'POST',
+        body: formData,
+      });
 
-      if (uploadError) {
-        throw uploadError;
+      if (!res.ok) {
+        throw new Error('Error al subir la imagen');
       }
 
       setUploadProgress(70);
 
       // Obtener URL pública
-      const { data: urlData } = supabase.storage
-        .from('images')
-        .getPublicUrl(filePath);
+      const { url } = await res.json();
 
       setUploadProgress(100);
       setUploading(false);
 
-      return urlData.publicUrl;
+      return url;
     } catch (err: any) {
       console.error('Error al subir imagen:', err);
       setError(err.message || 'Error al subir la imagen');
@@ -80,14 +80,18 @@ export const useSupabaseUpload = () => {
         throw new Error('URL inválida');
       }
 
-      const filePath = pathParts[1];
+      //const filePath = pathParts[1];
 
-      const { error } = await supabase.storage
-        .from('images')
-        .remove([filePath]);
+      const res = await fetch('http://localhost:4000/uploads', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: imageUrl }),
+      });
 
-      if (error) {
-        throw error;
+      if (!res.ok) {
+        throw new Error('Error al eliminar la imagen');
       }
 
       return true;

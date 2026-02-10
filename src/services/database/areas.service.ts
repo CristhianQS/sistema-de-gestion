@@ -47,37 +47,32 @@ export async function getAllAreas(
  * @deprecated Usar getAllAreas con parámetros de paginación
  */
 export async function getAllAreasUnpaginated(): Promise<Area[]> {
-  const { data, error } = await supabase
-    .from('areas')
-    .select('*')
-    .order('name', { ascending: true });
+  const res = await fetch(`http://localhost:4000/areas`);
 
-  if (error) {
-    console.error('Error al obtener áreas:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al obtener áreas:');
+    throw Error("Error, ERROR MATE!");
   }
 
-  return data || [];
+  return res.json() || [];
 }
 
 /**
  * Obtener área por ID
  */
 export async function getAreaById(id: number): Promise<Area | null> {
-  const { data, error } = await supabase
-    .from('areas')
-    .select('*')
-    .eq('id', id)
-    .single();
+  const res = await fetch(`http://localhost:4000/areas/${id}`);
 
-  if (error) {
+  //if (error) {
+  if (!res.ok) {
     // PGRST116 = no se encontró el registro
-    if (error.code === 'PGRST116') {
+    /*if (error.code === 'PGRST116') {
       return null;
-    }
-    console.error('Error al obtener área:', error);
-    throw error;
+    }*/
+    console.error('Error al obtener área:');
+    throw Error("Error en la ejecución");
   }
+  const data = await res.json();
 
   return data;
 }
@@ -86,17 +81,20 @@ export async function getAreaById(id: number): Promise<Area | null> {
  * Crear nueva área
  */
 export async function createArea(area: Omit<Area, 'id' | 'created_at'>): Promise<Area> {
-  const { data, error } = await supabase
-    .from('areas')
-    .insert([area])
-    .select()
-    .single();
+  const res = await fetch('http://localhost:4000/nuevoarea', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(area),
+  });
 
-  if (error) {
-    console.error('Error al crear área:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al crear área:');
+    throw Error("Error en la ejecución");
   }
 
+  const data = await res.json();
   return data;
 }
 
@@ -104,18 +102,20 @@ export async function createArea(area: Omit<Area, 'id' | 'created_at'>): Promise
  * Actualizar área existente
  */
 export async function updateArea(id: number, updates: Partial<Omit<Area, 'id' | 'created_at'>>): Promise<Area> {
-  const { data, error } = await supabase
-    .from('areas')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
+  const res = await fetch(`http://localhost:4000/editararea/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(updates),
+  });
 
-  if (error) {
-    console.error('Error al actualizar área:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al actualizar área.');
+    throw Error("Error en la ejecución");
   }
 
+  const data = await res.json();
   return data;
 }
 
@@ -123,14 +123,11 @@ export async function updateArea(id: number, updates: Partial<Omit<Area, 'id' | 
  * Eliminar área
  */
 export async function deleteArea(id: number): Promise<void> {
-  const { error } = await supabase
-    .from('areas')
-    .delete()
-    .eq('id', id);
+  const res = await fetch(`http://localhost:4000/borrararea/${id}`);
 
-  if (error) {
-    console.error('Error al eliminar área:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al eliminar área.');
+    throw Error("Error en la ejecución");
   }
 }
 
@@ -145,29 +142,20 @@ export async function searchAreasByKeyword(
   const { page = 1, pageSize = DEFAULT_PAGE_SIZE } = params || {};
   const { from, to } = toPaginationRange({ page, pageSize });
 
-  // Obtener el conteo total
-  const { count, error: countError } = await supabase
-    .from('areas')
-    .select('*', { count: 'exact', head: true })
-    .or(`name.ilike.%${keyword}%,description.ilike.%${keyword}%`);
+  const params2 = new URLSearchParams({
+      keyword,
+      from: String(from),
+      to: String(to),
+    });
 
-  if (countError) {
-    console.error('Error al contar áreas en búsqueda:', countError);
-    throw countError;
+  const res = await fetch(`http://localhost:4000/buscarareas?${params2}`);
+
+  if (!res.ok) {
+    console.error('Error al buscar áreas.'); 
+    throw Error('Error fetching areas');
   }
 
-  // Obtener los datos paginados
-  const { data, error } = await supabase
-    .from('areas')
-    .select('*')
-    .or(`name.ilike.%${keyword}%,description.ilike.%${keyword}%`)
-    .order('name', { ascending: true })
-    .range(from, to);
-
-  if (error) {
-    console.error('Error al buscar áreas:', error);
-    throw error;
-  }
+  const { data, count } = await res.json();
 
   return createPaginationResult(data || [], count || 0, { page, pageSize });
 }

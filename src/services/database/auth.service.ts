@@ -1,4 +1,4 @@
-import { supabase } from '../../lib/supabase';
+//import { supabase } from '../../lib/supabase';
 
 /**
  * Servicio de acceso a datos para Autenticación
@@ -25,18 +25,14 @@ export interface Admin {
  * Obtener todos los administradores
  */
 export async function getAllAdmins(): Promise<Admin[]> {
-  const { data, error } = await supabase
-    .from('admin_user')
-    .select(`
-      *,
-      area:areas(id, name, description)
-    `)
-    .order('name', { ascending: true });
+  const res = await fetch('http://localhost:4000/users');
 
-  if (error) {
-    console.error('Error al obtener administradores:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al obtener administradores:');
+    throw new Error('Error loading admin users');
   }
+
+  const data = await res.json();
 
   return data || [];
 }
@@ -45,22 +41,25 @@ export async function getAllAdmins(): Promise<Admin[]> {
  * Obtener administrador por ID
  */
 export async function getAdminById(id: number): Promise<Admin | null> {
-  const { data, error } = await supabase
-    .from('admin_user')
-    .select(`
-      *,
-      area:areas(id, name, description)
-    `)
-    .eq('id', id)
-    .single();
+  const params = new URLSearchParams({
+    id: String(id)
+  });
+  const res = await fetch(`http://localhost:4000/users/find?${params}`);
 
-  if (error) {
+  /*if (error) {
     if (error.code === 'PGRST116') {
       return null;
     }
     console.error('Error al obtener administrador:', error);
     throw error;
+  }*/
+ 
+  if (!res.ok) {
+    console.error('Error al obtener administrador.');
+    throw new Error('Error al obtener administrador');
   }
+
+  const data = await res.json();
 
   return data;
 }
@@ -70,22 +69,25 @@ export async function getAdminById(id: number): Promise<Admin | null> {
  * Útil para el proceso de login
  */
 export async function getAdminByEmail(email: string): Promise<Admin | null> {
-  const { data, error } = await supabase
-    .from('admin_user')
-    .select(`
-      *,
-      area:areas(id, name, description)
-    `)
-    .eq('email', email)
-    .single();
+  const params = new URLSearchParams({
+    email
+  });
+  const res = await fetch(`http://localhost:4000/users/find?${params}`);
 
-  if (error) {
+  /*if (error) {
     if (error.code === 'PGRST116') {
       return null;
     }
     console.error('Error al obtener administrador por email:', error);
     throw error;
+  }*/
+
+  if (!res.ok) {
+    console.error('Error al obtener administrador por email');
+    throw new Error('Error al obtener administrador por email');
   }
+
+  const data = await res.json();
 
   return data;
 }
@@ -96,23 +98,28 @@ export async function getAdminByEmail(email: string): Promise<Admin | null> {
  * IMPORTANTE: En producción se debería usar hash de contraseñas
  */
 export async function verifyAdminCredentials(email: string, password: string): Promise<Admin | null> {
-  const { data, error } = await supabase
-    .from('admin_user')
-    .select(`
-      *,
-      area:areas(id, name, description)
-    `)
-    .eq('email', email)
-    .eq('password', password)
-    .single();
+  const res = await fetch('http://localhost:4000/users/verify', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, password }), 
+    });
 
-  if (error) {
+  /*if (error) {
     if (error.code === 'PGRST116') {
       return null; // Credenciales incorrectas
     }
     console.error('Error al verificar credenciales:', error);
     throw error;
+  }*/
+
+  if (!res.ok) {
+    console.error('Error al verificar credenciales');
+    throw new Error('Error al verificar credenciales');
   }
+
+  const data = await res.json();
 
   return data;
 }
@@ -121,19 +128,23 @@ export async function verifyAdminCredentials(email: string, password: string): P
  * Crear nuevo administrador
  */
 export async function createAdmin(admin: Omit<Admin, 'id' | 'created_at' | 'area'>): Promise<Admin> {
-  const { data, error } = await supabase
-    .from('admin_user')
-    .insert([admin])
-    .select(`
-      *,
-      area:areas(id, name, description)
-    `)
-    .single();
+  const res = await fetch('http://localhost:4000/users/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(admin),
+  });
 
-  if (error) {
+  /*if (error) {
     console.error('Error al crear administrador:', error);
     throw error;
+  }*/
+
+  if (!res.ok) {
+    console.error('Error al crear administrador');
+    throw new Error('Error al crear administrador');
   }
+
+  const data = await res.json();
 
   return data;
 }
@@ -145,20 +156,17 @@ export async function updateAdmin(
   id: number,
   updates: Partial<Omit<Admin, 'id' | 'created_at' | 'area'>>
 ): Promise<Admin> {
-  const { data, error } = await supabase
-    .from('admin_user')
-    .update(updates)
-    .eq('id', id)
-    .select(`
-      *,
-      area:areas(id, name, description)
-    `)
-    .single();
+  const res = await fetch(`http://localhost:4000/users/update/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  });
 
-  if (error) {
-    console.error('Error al actualizar administrador:', error);
-    throw error;
+  if (!res.ok) {
+    throw new Error('Error al actualizar administrador');
   }
+
+  const data = await res.json();
 
   return data;
 }
@@ -175,14 +183,11 @@ export async function changeAdminPassword(id: number, newPassword: string): Prom
  * Eliminar administrador
  */
 export async function deleteAdmin(id: number): Promise<void> {
-  const { error } = await supabase
-    .from('admin_user')
-    .delete()
-    .eq('id', id);
+  const res = await fetch(`http://localhost:4000/users/delete/${id}`);
 
-  if (error) {
-    console.error('Error al eliminar administrador:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al eliminar administrador');
+    throw new Error('Error al eliminar administrador');
   }
 }
 
@@ -190,19 +195,17 @@ export async function deleteAdmin(id: number): Promise<void> {
  * Obtener administradores por rol
  */
 export async function getAdminsByRole(role: 'admin_black' | 'admin_oro' | 'admin_plata'): Promise<Admin[]> {
-  const { data, error } = await supabase
-    .from('admin_user')
-    .select(`
-      *,
-      area:areas(id, name, description)
-    `)
-    .eq('role', role)
-    .order('name', { ascending: true });
+  const params = new URLSearchParams({
+    role
+  });
+  const res = await fetch(`http://localhost:4000/users/find?${params}`);
 
-  if (error) {
-    console.error('Error al obtener administradores por rol:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al obtener administradores por rol');
+    throw new Error('Error al obtener administradores por rol');
   }
+
+  const data = await res.json();
 
   return data || [];
 }
@@ -212,19 +215,17 @@ export async function getAdminsByRole(role: 'admin_black' | 'admin_oro' | 'admin
  * Útil para admin_oro que solo pueden ver su área
  */
 export async function getAdminsByArea(areaId: number): Promise<Admin[]> {
-  const { data, error } = await supabase
-    .from('admin_user')
-    .select(`
-      *,
-      area:areas(id, name, description)
-    `)
-    .eq('area_id', areaId)
-    .order('name', { ascending: true });
+  const params = new URLSearchParams({
+    area_id: String(areaId)
+  });
+  const res = await fetch(`http://localhost:4000/users/find?${params}`);
 
-  if (error) {
-    console.error('Error al obtener administradores del área:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al obtener administradores del área');
+    throw new Error('Error al obtener administradores del área');
   }
+
+  const data = await res.json();
 
   return data || [];
 }

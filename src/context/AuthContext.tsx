@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+//import { supabase } from '../lib/supabase';
 
 interface AdminUser {
   id: number;
@@ -33,21 +33,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(false);
   }, []);
 
-  const login = async (email: string, password: string): Promise<{ success: boolean; message: string }> => {
+  const login = async (email: string, password: string) => {
     try {
-      const { data, error } = await supabase
-        .from('admin_user')
-        .select('*')
-        .eq('email', email)
-        .eq('password', password)
-        .single();
+      const res = await fetch('http://localhost:4000/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, password }), // Send email and password
+    });
 
-      if (error || !data) {
-        return { success: false, message: 'Email o contraseña incorrectos' };
-      }
+      if (!res.ok) {
+      throw new Error('Error de inicio de sesión');
+    }
 
-      setUser(data as AdminUser);
-      localStorage.setItem('admin_user', JSON.stringify(data));
+    const data = await res.json();
+
+    console.log(data)
+
+    if (!data.success) {
+      return { success: false, message: data.message || 'Email o contraseña incorrectos' };
+    }
+
+      setUser(data.data as AdminUser);
+      localStorage.setItem('admin_user', JSON.stringify(data.data));
       return { success: true, message: 'Inicio de sesión exitoso' };
     } catch (error) {
       console.error('Error:', error);
