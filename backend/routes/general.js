@@ -50,5 +50,7 @@ router.delete('/salones/borrar/:id', SalonesController.deleteSalon);
 router.get('/salones/conteo/:id', SalonesController.countSalonesByPabellon);
 router.get('/alumnos/conteo', AlumnosController.countAlumnos);
 router.get('/alumnos/listapag', AlumnosController.getAlumnosPaginated);
+router.get('/alumnos/lista', AlumnosController.getAllAlumnos);
+router.get('/alumnos/buscar', AlumnosController.getAlumnoByParameter);
 
 module.exports = router;

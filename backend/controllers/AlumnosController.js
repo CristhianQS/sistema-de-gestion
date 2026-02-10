@@ -32,6 +32,22 @@ const AlumnosController = {
 
     res.json(reqdata);
   },
+  
+  async getAlumnoByParameter(req, res) {
+    const { id, codigo } = req.query;
+    const newQuery = {
+      id, 
+      codigo
+    }
+
+    const reqdata = await AlumnosModel.findEx(newQuery);
+
+    if (!reqdata) {
+      return res.status(404).json({ error: 'No se encontró al alumno' });
+    }
+
+    res.json(reqdata);
+  }
 };
 
 module.exports = AlumnosController;

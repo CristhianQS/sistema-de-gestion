@@ -67,20 +67,14 @@ export async function getAllStudentsUnpaginated(): Promise<DataAlumno[]> {
  * Esta es la función más usada para validación
  */
 export async function getStudentByCode(codigo: string): Promise<DataAlumno | null> {
-  const { data, error } = await supabase
-    .from('data_alumnos')
-    .select('*')
-    .eq('codigo', codigo)
-    .single();
+  const res = await fetch(`http://localhost:4000/alumnos/buscar?codigo=${codigo}`);
 
-  if (error) {
-    // PGRST116 = no se encontró el registro
-    if (error.code === 'PGRST116') {
-      return null;
-    }
-    console.error('Error al obtener estudiante:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al obtener estudiante');
+    throw new Error('Error al obtener estudiante');
   }
+
+  const data = await res.json();
 
   return data;
 }
@@ -89,19 +83,14 @@ export async function getStudentByCode(codigo: string): Promise<DataAlumno | nul
  * Obtener estudiante por ID
  */
 export async function getStudentById(id: number): Promise<DataAlumno | null> {
-  const { data, error } = await supabase
-    .from('data_alumnos')
-    .select('*')
-    .eq('id', id)
-    .single();
+  const res = await fetch(`http://localhost:4000/alumnos/buscar?id=${id}`);
 
-  if (error) {
-    if (error.code === 'PGRST116') {
-      return null;
-    }
-    console.error('Error al obtener estudiante:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al obtener estudiante');
+    throw new Error('Error al obtener estudiante');
   }
+
+  const data = await res.json();
 
   return data;
 }
