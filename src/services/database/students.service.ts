@@ -99,16 +99,18 @@ export async function getStudentById(id: number): Promise<DataAlumno | null> {
  * Crear nuevo estudiante
  */
 export async function createStudent(student: Omit<DataAlumno, 'id' | 'created_at'>): Promise<DataAlumno> {
-  const { data, error } = await supabase
-    .from('data_alumnos')
-    .insert([student])
-    .select()
-    .single();
+  const res = await fetch(`http://localhost:4000/alumnos/nuevo`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(student),
+  });
 
-  if (error) {
-    console.error('Error al crear estudiante:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al crear estudiante');
+    throw new Error('Error al crear estudiante');
   }
+
+  const data = await res.json();
 
   return data;
 }
@@ -120,17 +122,18 @@ export async function updateStudent(
   id: number,
   updates: Partial<Omit<DataAlumno, 'id' | 'created_at'>>
 ): Promise<DataAlumno> {
-  const { data, error } = await supabase
-    .from('data_alumnos')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
+  const res = await fetch(`http://localhost:4000/alumnos/editar/$${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  });
 
-  if (error) {
-    console.error('Error al actualizar estudiante:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al actualizar estudiante');
+    throw new Error('Error al actualizar estudiante');
   }
+
+  const data = await res.json();
 
   return data;
 }
@@ -139,14 +142,11 @@ export async function updateStudent(
  * Eliminar estudiante
  */
 export async function deleteStudent(id: number): Promise<void> {
-  const { error } = await supabase
-    .from('data_alumnos')
-    .delete()
-    .eq('id', id);
+  const res = await fetch(`http://localhost:4000/alumnos/borrar/${id}`);
 
-  if (error) {
-    console.error('Error al eliminar estudiante:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al eliminar estudiante');
+    throw new Error('Error al eliminar estudiante');
   }
 }
 
