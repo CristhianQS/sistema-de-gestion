@@ -52,5 +52,7 @@ router.get('/alumnos/conteo', AlumnosController.countAlumnos);
 router.get('/alumnos/listapag', AlumnosController.getAlumnosPaginated);
 router.get('/alumnos/lista', AlumnosController.getAllAlumnos);
 router.get('/alumnos/buscar', AlumnosController.getAlumnoByParameter);
+router.get('/alumnos/filtrar', AlumnosController.filterAlumnosByTerm);
+router.get('/alumnos/conteo2', AlumnosController.countAlumnosByTerm);
 
 module.exports = router;

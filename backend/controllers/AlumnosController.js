@@ -47,7 +47,31 @@ const AlumnosController = {
     }
 
     res.json(reqdata);
-  }
+  },
+
+  async filterAlumnosByTerm(req, res) {
+    const { searchterm, from, to} = req.query;
+
+    const reqdata = await AlumnosModel.findAllMatching(searchterm, from, to);
+
+    if (!reqdata) {
+      return res.status(404).json({ error: 'Ningún alumno coincide con el término de búsqueda' });
+    }
+
+    res.json(reqdata);
+  },
+
+  async countAlumnosByTerm(req, res) {
+    const { searchterm } = req.query;
+
+    const reqdata = await AlumnosModel.countAllMatching(searchterm);
+
+    if (!reqdata) {
+      return res.status(404).json({ error: 'Ningún alumno coincide con el término de búsqueda' });
+    }
+
+    res.json(reqdata);
+  },
 };
 
 module.exports = AlumnosController;

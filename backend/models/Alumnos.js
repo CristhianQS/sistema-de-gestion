@@ -129,29 +129,22 @@ const AlumnosModel = {
       ORDER BY apellidos ASC, nombres ASC LIMIT $2 OFFSET $3
     `;
 
-    let countQuery = `
-      SELECT COUNT(*) FROM data_alumnos
-    `;
+    const result = pool.query(query, [searchTerm ? `'%${searchTerm}%'` : null, pageSize, from]);
 
-    // Búsqueda por término (misma condición)
+    return result.rows;
+  },
+
+  async countAllMatching(searchTerm) {
+    let query = `SELECT COUNT(*) FROM data_alumnos`;
+
     if (searchTerm && searchTerm.trim()) {
-      countQuery += `
-        WHERE 
-          estudiante ILIKE $1 OR
-          codigo ILIKE $1
-      `;
+      query += `WHERE estudiante ILIKE $1 OR codigo ILIKE $1`;
     }
 
-    const [dataResult, countResult] = await Promise.all([
-      pool.query(query, [searchTerm ? `'%${searchTerm}%'` : null, pageSize, from]),
-      pool.query(countQuery, [searchTerm ? `'%${searchTerm}%'` : null])
-    ]);
+    const result = await pool.query(query, [searchTerm ? `'%${searchTerm}%'` : null]);
 
-    return {
-      data: dataResult.rows,
-      count: parseInt(countResult.rows[0].count, 10)
-    };
-  },
+    return result.rows[0].count;
+  }
 };
 
 module.exports = AlumnosModel;
