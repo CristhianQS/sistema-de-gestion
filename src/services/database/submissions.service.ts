@@ -18,31 +18,24 @@ export async function getAllSubmissions(
   const { from, to } = toPaginationRange({ page, pageSize });
 
   // Obtener el conteo total
-  const { count, error: countError } = await supabase
-    .from('area_submissions')
-    .select('*', { count: 'exact', head: true });
+  const res = await fetch('http://localhost:4000/reportes/conteo');
 
-  if (countError) {
-    console.error('Error al contar reportes:', countError);
-    throw countError;
+  if (!res.ok) {
+    console.error('Error al contar reportes');
+    throw new Error('Error al contar reportes');
   }
+
+  const count = await res.json();
 
   // Obtener los datos paginados ordenados por prioridad primero
-  const { data, error } = await supabase
-    .from('area_submissions')
-    .select(`
-      *,
-      area:areas(id, name, description),
-      alumno:data_alumnos(id, codigo, estudiante)
-    `)
-    .order('prioridad', { ascending: false }) // Reportes de docentes (alta) primero
-    .order('created_at', { ascending: false }) // Luego por fecha
-    .range(from, to);
+  const res2 = await fetch(`http://localhost:4000/reportes/filtrar?from=${from}&to=${to}`);
 
-  if (error) {
-    console.error('Error al obtener reportes:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al obtener reportes');
+    throw new Error('Error al obtener reportes');
   }
+
+  const data = await res2.json();
 
   return createPaginationResult(data || [], count || 0, { page, pageSize });
 }
@@ -52,19 +45,14 @@ export async function getAllSubmissions(
  * @deprecated Usar getAllSubmissions con parámetros de paginación
  */
 export async function getAllSubmissionsUnpaginated(): Promise<AreaSubmission[]> {
-  const { data, error } = await supabase
-    .from('area_submissions')
-    .select(`
-      *,
-      area:areas(id, name, description),
-      alumno:data_alumnos(id, codigo, estudiante)
-    `)
-    .order('created_at', { ascending: false });
+  const res = await fetch('http://localhost:4000/reportes/lista');
 
-  if (error) {
-    console.error('Error al obtener reportes:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al obtener reportes');
+    throw new Error('Error al obtener reportes');
   }
+
+  const data = await res.json();
 
   return data || [];
 }
@@ -73,23 +61,22 @@ export async function getAllSubmissionsUnpaginated(): Promise<AreaSubmission[]> 
  * Obtener reporte por ID
  */
 export async function getSubmissionById(id: number): Promise<AreaSubmission | null> {
-  const { data, error } = await supabase
-    .from('area_submissions')
-    .select(`
-      *,
-      area:areas(id, name, description),
-      alumno:data_alumnos(id, codigo, estudiante)
-    `)
-    .eq('id', id)
-    .single();
+  const res = await fetch(`http://localhost:4000/reportes/buscar/${id}`);
 
-  if (error) {
+  if (!res.ok) {
+    console.error('Error al obtener reporte');
+    throw new Error('Error al obtener reporte');
+  }
+
+  const data = await res.json();
+
+  /*if (error) {
     if (error.code === 'PGRST116') {
       return null;
     }
     console.error('Error al obtener reporte:', error);
     throw error;
-  }
+  }*/
 
   return data;
 }
@@ -105,32 +92,30 @@ export async function getSubmissionsByArea(
   const { from, to } = toPaginationRange({ page, pageSize });
 
   // Obtener el conteo total
-  const { count, error: countError } = await supabase
-    .from('area_submissions')
-    .select('*', { count: 'exact', head: true })
-    .eq('area_id', areaId);
+  const res = await fetch(`http://localhost:4000/reportes/conteo_area/${areaId}`);
 
-  if (countError) {
-    console.error('Error al contar reportes por área:', countError);
-    throw countError;
+  if (!res.ok) {
+    console.error('Error al contar reportes por área');
+    throw new Error('Error al contar reportes por área');
   }
+
+  const count = await res.json();
+
+  const params2 = new URLSearchParams({
+    areaId: String(areaId),
+    from: String(from),
+    to: String(to)
+  });
 
   // Obtener los datos paginados
-  const { data, error } = await supabase
-    .from('area_submissions')
-    .select(`
-      *,
-      area:areas(id, name, description),
-      alumno:data_alumnos(id, codigo, estudiante)
-    `)
-    .eq('area_id', areaId)
-    .order('created_at', { ascending: false })
-    .range(from, to);
+  const res2 = await fetch(`http://localhost:4000/reportes/filtro_area?${params2}`);
 
-  if (error) {
-    console.error('Error al obtener reportes por área:', error);
-    throw error;
+  if (!res2.ok) {
+    console.error('Error al obtener reportes por área');
+    throw new Error('Error al obtener reportes por área');
   }
+
+  const data = await res2.json();
 
   return createPaginationResult(data || [], count || 0, { page, pageSize });
 }
@@ -147,32 +132,30 @@ export async function getSubmissionsByStudentCode(
   const { from, to } = toPaginationRange({ page, pageSize });
 
   // Obtener el conteo total
-  const { count, error: countError } = await supabase
-    .from('area_submissions')
-    .select('*', { count: 'exact', head: true })
-    .eq('codigo_alumno', codigoAlumno);
+  const res = await fetch(`http://localhost:4000/reportes/conteo_estudiante/${codigoAlumno}`);
 
-  if (countError) {
-    console.error('Error al contar reportes del estudiante:', countError);
-    throw countError;
+  if (!res.ok) {
+    console.error('Error al contar reportes del estudiante');
+    throw new Error('Error al contar reportes del estudiante');
   }
+
+  const count = await res.json();
+
+  const params2 = new URLSearchParams({
+    codigoAlumno: String(codigoAlumno),
+    from: String(from),
+    to: String(to)
+  });
 
   // Obtener los datos paginados
-  const { data, error } = await supabase
-    .from('area_submissions')
-    .select(`
-      *,
-      area:areas(id, name, description),
-      alumno:data_alumnos(id, codigo, estudiante)
-    `)
-    .eq('codigo_alumno', codigoAlumno)
-    .order('created_at', { ascending: false })
-    .range(from, to);
+  const res2 = await fetch(`http://localhost:4000/reportes/filtro_estudiante?${params2}`);
 
-  if (error) {
-    console.error('Error al obtener reportes del estudiante:', error);
-    throw error;
+  if (!res2.ok) {
+    console.error('Error al obtener reportes del estudiante');
+    throw new Error('Error al obtener reportes del estudiante');
   }
+
+  const data = await res2.json();
 
   return createPaginationResult(data || [], count || 0, { page, pageSize });
 }
@@ -351,7 +334,9 @@ export async function countSubmissionsByStatus(): Promise<{
     total: data?.length || 0,
   };
 
-  data?.forEach((item) => {
+  const data2: [{status: string}] = data;
+
+  data2?.forEach((item) => {
     if (item.status === 'pending') counts.pending++;
     else if (item.status === 'in_progress') counts.in_progress++;
     else if (item.status === 'completed') counts.completed++;

@@ -1,4 +1,4 @@
-import { supabase } from '../../lib/supabase';
+//import { supabase } from '../../lib/supabase';
 import type { DataAlumno } from '../../lib/supabase';
 import type { PaginationParams, PaginationResult } from '../../types/pagination';
 import { toPaginationRange, createPaginationResult, DEFAULT_PAGE_SIZE } from '../../types/pagination';
@@ -161,28 +161,30 @@ export async function searchStudents(
   const { from, to } = toPaginationRange({ page, pageSize });
 
   // Obtener el conteo total
-  const { count, error: countError } = await supabase
-    .from('data_alumnos')
-    .select('*', { count: 'exact', head: true })
-    .or(`estudiante.ilike.%${searchTerm}%,codigo.ilike.%${searchTerm}%`);
+  const res = await fetch(`http://localhost:4000/alumnos/conteo2?searchterm=${searchTerm}`);
 
-  if (countError) {
-    console.error('Error al contar estudiantes en búsqueda:', countError);
-    throw countError;
+  if (!res.ok) {
+    console.error('Error al contar estudiantes en búsqueda');
+    throw new Error('Error al contar estudiantes en búsqueda');
   }
+
+  const count = await res.json();
+
+  const params2 = new URLSearchParams({
+    searchterm: String(searchTerm? searchTerm : null),
+    from: String(from),
+    to: String(to)
+  });
 
   // Obtener los datos paginados
-  const { data, error } = await supabase
-    .from('data_alumnos')
-    .select('*')
-    .or(`estudiante.ilike.%${searchTerm}%,codigo.ilike.%${searchTerm}%`)
-    .order('estudiante', { ascending: true })
-    .range(from, to);
+  const res2 = await fetch(`http://localhost:4000/alumnos/filtrar?${params2}`);
 
-  if (error) {
-    console.error('Error al buscar estudiantes:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al buscar estudiantes');
+    throw new Error('Error al buscar estudiantes');
   }
+
+  const data = await res2.json();
 
   return createPaginationResult(data || [], count || 0, { page, pageSize });
 }

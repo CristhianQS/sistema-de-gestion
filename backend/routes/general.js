@@ -6,6 +6,7 @@ const NotificacionesController = require('../controllers/NotificacionesControlle
 const PabellonesController = require('../controllers/PabellonesController');
 const SalonesController = require('../controllers/SalonesController');
 const AlumnosController = require('../controllers/AlumnosController');
+const ReportesController = require('../controllers/ReportesController');
 const upload = require('../controllers/ImageMiddleware');
 const UploadController = require('../controllers/UploadController');
 
@@ -53,6 +54,13 @@ router.get('/alumnos/listapag', AlumnosController.getAlumnosPaginated);
 router.get('/alumnos/lista', AlumnosController.getAllAlumnos);
 router.get('/alumnos/buscar', AlumnosController.getAlumnoByParameter);
 router.get('/alumnos/filtrar', AlumnosController.filterAlumnosByTerm);
-router.get('/alumnos/conteo2', AlumnosController.countAlumnosByTerm);
+router.get('/reportes/conteo', ReportesController.getSubmissionsCount);
+router.get('/reportes/filtrar', ReportesController.getSubmissionsPaginated);
+router.get('/reportes/lista', ReportesController.getAllSubmissions);
+router.get('/reportes/buscar/:id', ReportesController.getSubmissionById);
+router.get('/reportes/conteo_area/:areaId', ReportesController.getSubmissionsCountByArea);
+router.get('/reportes/filtro_area', ReportesController.getSubmissionsByArea);
+router.get('/reportes/conteo_estudiante/:codigoAlumno', ReportesController.getSubmissionsCountByStudent);
+router.get('/reportes/filtro_estudiante', ReportesController.getSubmissionsByStudent);
 
 module.exports = router;
