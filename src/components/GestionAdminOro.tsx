@@ -54,33 +54,25 @@ const GestionAdminOro: React.FC = () => {
 
   const loadAdmins = async () => {
     try {
-      const { data, error } = await supabase
-        .from('admin_user')
-        .select('*')
-        .eq('role', 'admin_oro')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      const adminsConAreas = await Promise.all(
-        (data || []).map(async (admin) => {
-          const { data: userAreasData } = await supabase
-            .from('user_areas')
-            .select('area_id')
-            .eq('user_id', admin.id);
-
-          if (userAreasData && userAreasData.length > 0) {
-            const areaIds = userAreasData.map(ua => ua.area_id);
-            const { data: areasData } = await supabase
-              .from('areas')
-              .select('id, name')
-              .in('id', areaIds);
-
-            return { ...admin, areas: areasData || [] };
-          }
-          return { ...admin, areas: [] };
-        })
+      const res = await fetch(
+        'http://localhost:4000/users/find?role=admin_oro'
       );
+
+      if (!res.ok) {
+        throw new Error('Error al obtener administradores oro');
+      }
+
+      //const data = await res.json();
+
+      const res2 = await fetch(
+        'http://localhost:4000/api/admin-users/admin-oro-with-areas'
+      );
+
+      if (!res2.ok) {
+        throw new Error('Error al obtener administradores con áreas');
+      }
+
+      const adminsConAreas = await res2.json();
 
       setAdmins(adminsConAreas);
     } catch (error) {
@@ -91,12 +83,13 @@ const GestionAdminOro: React.FC = () => {
 
   const loadAreas = async () => {
     try {
-      const { data, error } = await supabase
-        .from('areas')
-        .select('*')
-        .order('name', { ascending: true });
+      const res = await fetch('http://localhost:4000/areas');
 
-      if (error) throw error;
+      if (!res.ok) {
+        throw new Error('Error al obtener areas');
+      }
+
+      const data = await res.json();
       setAreas(data || []);
     } catch (error) {
       console.error('Error al cargar áreas:', error);
@@ -213,30 +206,47 @@ const GestionAdminOro: React.FC = () => {
           adminData.password = formData.password.trim();
         }
 
-        const { error } = await supabase
-          .from('admin_user')
-          .update(adminData)
-          .eq('id', editingAdmin.id);
+        const res = await fetch(`http://localhost:4000/admin-users/${editingAdmin.id}`,
+          {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(adminData)
+          }
+        );
+
+        if (!res.ok) {
+          throw new Error('Error al actualizar administrador');
+        }
 
         if (error) throw error;
         userId = editingAdmin.id;
 
-        await supabase
-          .from('user_areas')
-          .delete()
-          .eq('user_id', userId);
+        const res2 = await fetch(
+          `http://localhost:4000/api/user-areas/${userId}`,
+          {
+            method: 'DELETE'
+          }
+        );
+
+        if (!res2.ok) {
+          throw new Error('Error al eliminar áreas del usuario');
+        }
 
         setSuccess('✅ Administrador actualizado correctamente');
       } else {
         adminData.password = formData.password.trim();
 
-        const { data, error } = await supabase
-          .from('admin_user')
-          .insert([adminData])
-          .select()
-          .single();
+        const res = await fetch('http://localhost:4000/users/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(adminData),
+        });
 
         if (error) throw error;
+
+        const data = await res.json();
         userId = data.id;
         setSuccess('✅ Administrador creado correctamente');
       }
@@ -246,11 +256,20 @@ const GestionAdminOro: React.FC = () => {
         area_id: areaId
       }));
 
-      const { error: areasError } = await supabase
-        .from('user_areas')
-        .insert(userAreasData);
+      const res = await fetch(
+        'http://localhost:4000/api/user-areas',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(userAreasData)
+        }
+      );
 
-      if (areasError) throw areasError;
+      if (!res.ok) {
+        throw new Error('Error al asignar áreas al usuario');
+      }
 
       await loadAdmins();
 

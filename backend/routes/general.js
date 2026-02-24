@@ -7,6 +7,8 @@ const PabellonesController = require('../controllers/PabellonesController');
 const SalonesController = require('../controllers/SalonesController');
 const AlumnosController = require('../controllers/AlumnosController');
 const ReportesController = require('../controllers/ReportesController');
+const AdminUsersController = require('../controllers/AdminUsersController');
+const UserAreasController = require('../controllers/UserAreasController');
 const upload = require('../controllers/ImageMiddleware');
 const UploadController = require('../controllers/UploadController');
 
@@ -62,5 +64,22 @@ router.get('/reportes/conteo_area/:areaId', ReportesController.getSubmissionsCou
 router.get('/reportes/filtro_area', ReportesController.getSubmissionsByArea);
 router.get('/reportes/conteo_estudiante/:codigoAlumno', ReportesController.getSubmissionsCountByStudent);
 router.get('/reportes/filtro_estudiante', ReportesController.getSubmissionsByStudent);
+router.post('/reportes', ReportesController.createSubmission);
+router.put('/reportes/:id', ReportesController.updateSubmission);
+router.delete('/reportes/:id', ReportesController.deleteSubmission);
+router.get('/reportes/estado/:status', ReportesController.getByStatus);
+router.get('/reportes/conteo_estados', ReportesController.countByStatus);
+router.get('/reportes/recientes', ReportesController.getRecent);
+router.get('/reportes/ia', ReportesController.getAIGenerated);
+router.post('/reportes/marcar_revisado', ReportesController.markAsReviewed);
+router.get('/reportes/no_revisados', ReportesController.getUnreviewed);
+router.get('/reportes/no_revisados/conteo/:areaId', ReportesController.countUnreviewedByArea);
+router.get('/reportes/docentes', ReportesController.getDocenteReports);
+router.get('/reportes/prioridad', ReportesController.getReportsWithPriority);
+router.post('/reportes/docente', ReportesController.createDocenteSubmission);
+router.get('/admin-users/admin-oro-with-areas', AdminUsersController.getAdminOroWithAreas);
+router.put('/admin-users/:id', AdminUsersController.updateAdmin);
+router.delete('/user-areas/:userId', UserAreasController.deleteUserAreas);
+router.post('/user-areas', UserAreasController.insertUserAreas);
 
 module.exports = router;

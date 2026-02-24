@@ -1,4 +1,4 @@
-import { supabase } from '../../lib/supabase';
+//import { supabase } from '../../lib/supabase';
 import type { AreaSubmission } from '../../lib/supabase';
 import type { PaginationParams, PaginationResult } from '../../types/pagination';
 import { toPaginationRange, createPaginationResult, DEFAULT_PAGE_SIZE } from '../../types/pagination';
@@ -164,22 +164,14 @@ export async function getSubmissionsByStudentCode(
  * Obtener reportes por estado
  */
 export async function getSubmissionsByStatus(status: 'pending' | 'in_progress' | 'completed'): Promise<AreaSubmission[]> {
-  const { data, error } = await supabase
-    .from('area_submissions')
-    .select(`
-      *,
-      area:areas(id, name, description),
-      alumno:data_alumnos(id, codigo, estudiante)
-    `)
-    .eq('status', status)
-    .order('created_at', { ascending: false });
+  const res = await fetch(`http://localhost:4000/reportes/estado/${status}`);
 
-  if (error) {
-    console.error('Error al obtener reportes por estado:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al obtener reportes por estado');
+    throw new Error('Error al obtener reportes por estado');
   }
 
-  return data || [];
+  return await res.json();
 }
 
 /**
@@ -188,22 +180,18 @@ export async function getSubmissionsByStatus(status: 'pending' | 'in_progress' |
 export async function createSubmission(
   submission: Omit<AreaSubmission, 'id' | 'created_at' | 'updated_at'>
 ): Promise<AreaSubmission> {
-  const { data, error } = await supabase
-    .from('area_submissions')
-    .insert([submission])
-    .select(`
-      *,
-      area:areas(id, name, description),
-      alumno:data_alumnos(id, codigo, estudiante)
-    `)
-    .single();
+  const res = await fetch('http://localhost:4000/reportes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(submission),
+  });
 
-  if (error) {
-    console.error('Error al crear reporte:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al crear reporte');
+    throw new Error('Error al crear reporte');
   }
 
-  return data;
+  return await res.json();
 }
 
 /**
@@ -213,23 +201,18 @@ export async function updateSubmission(
   id: number,
   updates: Partial<Omit<AreaSubmission, 'id' | 'created_at'>>
 ): Promise<AreaSubmission> {
-  const { data, error } = await supabase
-    .from('area_submissions')
-    .update(updates)
-    .eq('id', id)
-    .select(`
-      *,
-      area:areas(id, name, description),
-      alumno:data_alumnos(id, codigo, estudiante)
-    `)
-    .single();
+  const res = await fetch(`http://localhost:4000/reportes/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  });
 
-  if (error) {
-    console.error('Error al actualizar reporte:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al actualizar reporte');
+    throw new Error('Error al actualizar reporte');
   }
 
-  return data;
+  return await res.json();
 }
 
 /**
@@ -247,14 +230,13 @@ export async function updateSubmissionStatus(
  * Eliminar reporte
  */
 export async function deleteSubmission(id: number): Promise<void> {
-  const { error } = await supabase
-    .from('area_submissions')
-    .delete()
-    .eq('id', id);
+  const res = await fetch(`http://localhost:4000/reportes/${id}`, {
+    method: 'DELETE',
+  });
 
-  if (error) {
-    console.error('Error al eliminar reporte:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al eliminar reporte');
+    throw new Error('Error al eliminar reporte');
   }
 }
 
@@ -262,25 +244,14 @@ export async function deleteSubmission(id: number): Promise<void> {
  * Obtener reportes recientes (últimos N días)
  */
 export async function getRecentSubmissions(days: number = 7): Promise<AreaSubmission[]> {
-  const fechaLimite = new Date();
-  fechaLimite.setDate(fechaLimite.getDate() - days);
+  const res = await fetch(`http://localhost:4000/reportes/recientes?days=${days}`);
 
-  const { data, error } = await supabase
-    .from('area_submissions')
-    .select(`
-      *,
-      area:areas(id, name, description),
-      alumno:data_alumnos(id, codigo, estudiante)
-    `)
-    .gte('created_at', fechaLimite.toISOString())
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('Error al obtener reportes recientes:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al obtener reportes recientes');
+    throw new Error('Error al obtener reportes recientes');
   }
 
-  return data || [];
+  return await res.json();
 }
 
 /**
@@ -288,22 +259,14 @@ export async function getRecentSubmissions(days: number = 7): Promise<AreaSubmis
  * Filtra reportes que tienen el flag ia_enabled en su metadata
  */
 export async function getAIGeneratedSubmissions(): Promise<AreaSubmission[]> {
-  const { data, error } = await supabase
-    .from('area_submissions')
-    .select(`
-      *,
-      area:areas(id, name, description),
-      alumno:data_alumnos(id, codigo, estudiante)
-    `)
-    .not('form_data->ia_metadata->ia_enabled', 'is', null)
-    .order('created_at', { ascending: false });
+  const res = await fetch(`http://localhost:4000/reportes/ia`);
 
-  if (error) {
-    console.error('Error al obtener reportes generados por IA:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al obtener reportes generados por IA');
+    throw new Error('Error al obtener reportes generados por IA');
   }
 
-  return data || [];
+  return await res.json();
 }
 
 /**
@@ -317,32 +280,14 @@ export async function countSubmissionsByStatus(): Promise<{
   total: number;
 }> {
   // Una sola query obteniendo solo el campo status
-  const { data, error } = await supabase
-    .from('area_submissions')
-    .select('status');
+  const res = await fetch(`http://localhost:4000/reportes/conteo_estados`);
 
-  if (error) {
-    console.error('Error al contar reportes por estado:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al contar reportes por estado');
+    throw new Error('Error al contar reportes por estado');
   }
 
-  // Contar en memoria (más eficiente que 4 queries separadas)
-  const counts = {
-    pending: 0,
-    in_progress: 0,
-    completed: 0,
-    total: data?.length || 0,
-  };
-
-  const data2: [{status: string}] = data;
-
-  data2?.forEach((item) => {
-    if (item.status === 'pending') counts.pending++;
-    else if (item.status === 'in_progress') counts.in_progress++;
-    else if (item.status === 'completed') counts.completed++;
-  });
-
-  return counts;
+  return await res.json();
 }
 
 /**
@@ -352,14 +297,15 @@ export async function markAsReviewed(
   submissionId: number,
   reviewedBy: string
 ): Promise<void> {
-  const { error } = await supabase.rpc('mark_report_as_reviewed', {
-    p_submission_id: submissionId,
-    p_reviewed_by: reviewedBy
+  const res = await fetch(`http://localhost:4000/reportes/marcar_revisado`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ submissionId, reviewedBy }),
   });
 
-  if (error) {
-    console.error('Error al marcar como revisado:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al marcar como revisado');
+    throw new Error('Error al marcar como revisado');
   }
 }
 
@@ -367,38 +313,28 @@ export async function markAsReviewed(
  * Obtener conteo de reportes no revisados por área
  */
 export async function getUnreviewedCountByArea(areaId: number): Promise<number> {
-  const { data, error } = await supabase.rpc('get_unreviewed_count_by_area', {
-    p_area_id: areaId
-  });
+  const res = await fetch(`http://localhost:4000/reportes/no_revisados/conteo/${areaId}`);
 
-  if (error) {
-    console.error('Error al obtener conteo de no revisados:', error);
+  if (!res.ok) {
+    console.error('Error al obtener conteo de no revisados');
     return 0;
   }
 
-  return data || 0;
+  return await res.json();
 }
 
 /**
  * Obtener todos los reportes no revisados
  */
 export async function getUnreviewedSubmissions(): Promise<AreaSubmission[]> {
-  const { data, error } = await supabase
-    .from('area_submissions')
-    .select(`
-      *,
-      area:areas(id, name, description),
-      alumno:data_alumnos(id, codigo, estudiante)
-    `)
-    .eq('reviewed', false)
-    .order('created_at', { ascending: false });
+  const res = await fetch(`http://localhost:4000/reportes/no_revisados`);
 
-  if (error) {
-    console.error('Error al obtener reportes no revisados:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al obtener reportes no revisados');
+    throw new Error('Error al obtener reportes no revisados');
   }
 
-  return data || [];
+  return await res.json();
 }
 
 /**
@@ -411,33 +347,16 @@ export async function getDocenteSubmissions(
   const { page = 1, pageSize = DEFAULT_PAGE_SIZE } = params || {};
   const { from, to } = toPaginationRange({ page, pageSize });
 
-  // Obtener el conteo total
-  const { count, error: countError } = await supabase
-    .from('area_submissions')
-    .select('*', { count: 'exact', head: true })
-    .eq('es_docente', true);
+  const res = await fetch(
+    `http://localhost:4000/reportes/docentes?from=${from}&to=${to}`
+  );
 
-  if (countError) {
-    console.error('Error al contar reportes de docentes:', countError);
-    throw countError;
+  if (!res.ok) {
+    console.error('Error al obtener reportes de docentes');
+    throw new Error('Error al obtener reportes de docentes');
   }
 
-  // Obtener los datos paginados
-  const { data, error } = await supabase
-    .from('area_submissions')
-    .select(`
-      *,
-      area:areas(id, name, description),
-      alumno:data_alumnos(id, codigo, estudiante)
-    `)
-    .eq('es_docente', true)
-    .order('created_at', { ascending: false })
-    .range(from, to);
-
-  if (error) {
-    console.error('Error al obtener reportes de docentes:', error);
-    throw error;
-  }
+  const { data, count } = await res.json();
 
   return createPaginationResult(data || [], count || 0, { page, pageSize });
 }
@@ -452,32 +371,16 @@ export async function getAllSubmissionsWithPriority(
   const { page = 1, pageSize = DEFAULT_PAGE_SIZE } = params || {};
   const { from, to } = toPaginationRange({ page, pageSize });
 
-  // Obtener el conteo total
-  const { count, error: countError } = await supabase
-    .from('area_submissions')
-    .select('*', { count: 'exact', head: true });
+  const res = await fetch(
+    `http://localhost:4000/reportes/prioridad?from=${from}&to=${to}`
+  );
 
-  if (countError) {
-    console.error('Error al contar reportes:', countError);
-    throw countError;
+  if (!res.ok) {
+    console.error('Error al obtener reportes con prioridad');
+    throw new Error('Error al obtener reportes con prioridad');
   }
 
-  // Obtener los datos paginados con orden de prioridad
-  const { data, error } = await supabase
-    .from('area_submissions')
-    .select(`
-      *,
-      area:areas(id, name, description),
-      alumno:data_alumnos(id, codigo, estudiante)
-    `)
-    .order('prioridad', { ascending: false }) // Ordenar por prioridad primero
-    .order('created_at', { ascending: false }) // Luego por fecha
-    .range(from, to);
-
-  if (error) {
-    console.error('Error al obtener reportes con prioridad:', error);
-    throw error;
-  }
+  const { data, count } = await res.json();
 
   return createPaginationResult(data || [], count || 0, { page, pageSize });
 }
@@ -492,29 +395,21 @@ export async function createDocenteSubmission(
   docenteDni: string,
   docenteNombre: string
 ): Promise<AreaSubmission> {
-  const submissionData = {
-    ...submission,
-    es_docente: true,
-    docente_id: docenteId,
-    docente_dni: docenteDni,
-    docente_nombre: docenteNombre,
-    prioridad: 'alta' as const,
-  };
+  const res = await fetch(`http://localhost:4000/reportes/docente`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      ...submission,
+      docenteId,
+      docenteDni,
+      docenteNombre,
+    }),
+  });
 
-  const { data, error } = await supabase
-    .from('area_submissions')
-    .insert([submissionData])
-    .select(`
-      *,
-      area:areas(id, name, description),
-      alumno:data_alumnos(id, codigo, estudiante)
-    `)
-    .single();
-
-  if (error) {
-    console.error('Error al crear reporte de docente:', error);
-    throw error;
+  if (!res.ok) {
+    console.error('Error al crear reporte de docente');
+    throw new Error('Error al crear reporte de docente');
   }
 
-  return data;
+  return await res.json();
 }
