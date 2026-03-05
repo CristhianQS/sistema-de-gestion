@@ -99,7 +99,19 @@ const UsuarioController = {
     const { id } = req.params;
 
     const userdata = await AdminUserModel.delete(id);
-  }
+  },
+
+  async getUsersByArea(req, res) {
+    const { id } = req.params;
+
+    const userdata = await UsuarioModel.findByAreaId(id);
+
+    if (!userdata) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    res.json(userdata);
+  },
 };
 
 module.exports = UsuarioController;

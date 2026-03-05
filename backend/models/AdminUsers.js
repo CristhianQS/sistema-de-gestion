@@ -58,6 +58,29 @@ const AdminUsersModel = {
     `, [...values, id]);
 
     return result.rows[0];
+  },
+
+  async updatePassword(id, password) {
+    const result = await pool.query(
+      `UPDATE admin_user
+       SET password = $1
+       WHERE id = $2
+       RETURNING *;`,
+      [password, id]
+    );
+
+    return result.rows[0];
+  },
+
+  async delete(id) {
+    const result = await pool.query(
+      `DELETE FROM admin_user
+       WHERE id = $1
+       RETURNING *;`,
+      [id]
+    );
+
+    return result.rows[0];
   }
 
 };

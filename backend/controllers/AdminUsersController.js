@@ -26,6 +26,41 @@ const AdminUsersController = {
     } catch (error) {
       res.status(500).json({ error: 'Error al actualizar administrador' });
     }
+  },
+
+  async updateAdminPassword(req, res) {
+    try {
+      const { id } = req.params;
+      const { password } = req.body;
+
+      const updated = await AdminUsersModel.updatePassword(id, password);
+
+      if (!updated) {
+        return res.status(404).json({ error: 'Administrador no encontrado' });
+      }
+
+      res.json(updated);
+
+    } catch (error) {
+      res.status(500).json({ error: 'Error al actualizar contraseña' });
+    }
+  },
+
+  async deleteAdmin(req, res) {
+    try {
+      const { id } = req.params;
+
+      const deleted = await AdminUsersModel.delete(id);
+
+      if (!deleted) {
+        return res.status(404).json({ error: 'Administrador no encontrado' });
+      }
+
+      res.json({ message: 'Administrador eliminado correctamente' });
+
+    } catch (error) {
+      res.status(500).json({ error: 'Error al eliminar administrador' });
+    }
   }
 
 };

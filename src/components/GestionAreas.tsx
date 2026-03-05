@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+//import { supabase } from '../lib/supabase';
 import GestionCamposArea from './GestionCamposArea';
 import SupabaseImageUploader from './SupabaseImageUploader';
 import { FolderOpen, Plus, Edit2, Trash2, X, Save, FileText, Image as ImageIcon } from 'lucide-react';
@@ -114,19 +114,31 @@ const GestionAreas: React.FC = () => {
       };
 
       if (modalMode === 'edit' && editingArea) {
-        const { error } = await supabase
-          .from('areas')
-          .update(areaData)
-          .eq('id', editingArea.id);
+        const res = await fetch(`http://localhost:4000/editararea/${editingArea.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(areaData),
+        });
 
-        if (error) throw error;
+        if (!res.ok) {
+          console.error('Error al actualizar área.');
+          throw Error("Error en la ejecución");
+        }
         setSuccess('✅ Área actualizada correctamente');
       } else {
-        const { error } = await supabase
-          .from('areas')
-          .insert([areaData]);
+        const res = await fetch('http://localhost:4000/nuevoarea', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(areaData),
+        });
 
-        if (error) throw error;
+        if (!res.ok) {
+          throw Error("Error en la ejecución");
+        }
         setSuccess('✅ Área creada correctamente');
       }
 
@@ -144,12 +156,13 @@ const GestionAreas: React.FC = () => {
 
   const handleDelete = async (area: Area) => {
     try {
-      const { data: users, error: checkError } = await supabase
-        .from('admin_user')
-        .select('id')
-        .eq('area_id', area.id);
+      const res = await fetch(`http://localhost:4000/users/findbyarea${area.id}`);
 
-      if (checkError) throw checkError;
+      if (!res.ok) {
+        throw Error("Error en la ejecución");
+      }
+      
+      const {data: users} = await res.json();
 
       if (users && users.length > 0) {
         setError(
@@ -164,12 +177,11 @@ const GestionAreas: React.FC = () => {
         return;
       }
 
-      const { error } = await supabase
-        .from('areas')
-        .delete()
-        .eq('id', area.id);
+      const res2 = await fetch(`http://localhost:4000/borrararea/${area.id}`);
 
-      if (error) throw error;
+      if (!res2.ok) {
+        throw Error("Error en la ejecución");
+      }
 
       setSuccess('✅ Área eliminada correctamente');
       await loadAreas();

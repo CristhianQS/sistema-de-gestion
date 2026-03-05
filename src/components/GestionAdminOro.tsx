@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+//import { supabase } from '../lib/supabase';
 import { UserPlus, Edit2, Trash2, X, Save, Shield, Mail, User, MapPin, Key } from 'lucide-react';
 
 interface AdminOro {
@@ -224,7 +224,7 @@ const GestionAdminOro: React.FC = () => {
         userId = editingAdmin.id;
 
         const res2 = await fetch(
-          `http://localhost:4000/api/user-areas/${userId}`,
+          `http://localhost:4000/user-areas/${userId}`,
           {
             method: 'DELETE'
           }
@@ -257,7 +257,7 @@ const GestionAdminOro: React.FC = () => {
       }));
 
       const res = await fetch(
-        'http://localhost:4000/api/user-areas',
+        'http://localhost:4000/user-areas',
         {
           method: 'POST',
           headers: {
@@ -304,12 +304,22 @@ const GestionAdminOro: React.FC = () => {
     setSaving(true);
 
     try {
-      const { error } = await supabase
-        .from('admin_user')
-        .update({ password: newPassword.trim() })
-        .eq('id', editingAdmin.id);
+      const res = await fetch(
+        `http://localhost:4000/admin-users/${editingAdmin.id}/password`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            password: newPassword.trim()
+          })
+        }
+      );
 
-      if (error) throw error;
+      if (!res.ok) {
+        throw new Error('Error al actualizar contraseña');
+      }
 
       setSuccess('✅ Contraseña actualizada correctamente');
 
@@ -330,12 +340,15 @@ const GestionAdminOro: React.FC = () => {
     }
 
     try {
-      const { error } = await supabase
-        .from('admin_user')
-        .delete()
-        .eq('id', admin.id);
+      const res = await fetch(`http://localhost:4000/api/admin-users/${admin.id}`,
+        {
+          method: 'DELETE'
+        }
+      );
 
-      if (error) throw error;
+      if (!res.ok) {
+        throw new Error('Error al eliminar administrador');
+      }
 
       setSuccess('✅ Administrador eliminado correctamente');
       await loadAdmins();

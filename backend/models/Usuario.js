@@ -124,6 +124,14 @@ const UsuarioModel = {
   
       return result.rows[0];
     },
+
+  async findByAreaId(id) {
+    const result = await pool.query(
+      'SELECT id FROM admin_user WHERE area_id = $1 LIMIT 1',
+      [id]
+    );
+    return result.rows;
+  },
 };
 
 module.exports = UsuarioModel;

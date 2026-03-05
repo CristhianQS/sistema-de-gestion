@@ -20,7 +20,7 @@ router.post('/login', UsuarioController.loginUser);
 router.get('/finduser', UsuarioController.findUser);
 router.post('/nuevoarea', AreaController.insertArea);
 router.put('/editararea/:id', AreaController.updateArea);
-router.delete('/nuevoarea', AreaController.deleteArea);
+router.delete('/borrararea', AreaController.deleteArea);
 router.get('/buscarareas', AreaController.searchArea);
 router.post('/uploads', upload.single('image'), UploadController.uploadImage);
 router.delete('/uploads', UploadController.deleteImage);
@@ -81,5 +81,8 @@ router.get('/admin-users/admin-oro-with-areas', AdminUsersController.getAdminOro
 router.put('/admin-users/:id', AdminUsersController.updateAdmin);
 router.delete('/user-areas/:userId', UserAreasController.deleteUserAreas);
 router.post('/user-areas', UserAreasController.insertUserAreas);
+router.put('/admin-users/:id/password', AdminUsersController.updateAdminPassword);
+router.delete('/admin-users/:id', AdminUsersController.deleteAdmin);
+router.get('/users/findbyarea/:id', UsuarioController.getUsersByArea);
 
 module.exports = router;
