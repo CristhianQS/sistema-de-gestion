@@ -9,6 +9,7 @@ const AlumnosController = require('../controllers/AlumnosController');
 const ReportesController = require('../controllers/ReportesController');
 const AdminUsersController = require('../controllers/AdminUsersController');
 const UserAreasController = require('../controllers/UserAreasController');
+const AreaFieldsController = require('../controllers/AreaFieldsController');
 const upload = require('../controllers/ImageMiddleware');
 const UploadController = require('../controllers/UploadController');
 
@@ -84,5 +85,12 @@ router.post('/user-areas', UserAreasController.insertUserAreas);
 router.put('/admin-users/:id/password', AdminUsersController.updateAdminPassword);
 router.delete('/admin-users/:id', AdminUsersController.deleteAdmin);
 router.get('/users/findbyarea/:id', UsuarioController.getUsersByArea);
+router.get('/area-fields/:areaId', AreaFieldsController.getAreaFields);
+router.post('/area-fields', AreaFieldsController.createAreaField);
+router.put('/area-fields/:id', AreaFieldsController.updateAreaField);
+router.delete('/area-fields/:id', AreaFieldsController.deleteAreaField);
+router.get('/selection-options/:areaId', AreaFieldsController.getSelectionOptions);
+router.post('/selection-options', AreaFieldsController.createSelectionOption);
+router.delete('/selection-options/:id', AreaFieldsController.deleteSelectionOption);
 
 module.exports = router;

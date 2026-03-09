@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+//import { supabase } from '../lib/supabase';
 
 interface AreaField {
   id?: number;
@@ -73,11 +73,9 @@ const GestionCamposArea: React.FC<Props> = ({ areaId, areaName, onClose }) => {
 
   const loadFields = async () => {
     try {
-      const { data, error } = await supabase
-        .from('area_fields')
-        .select('*')
-        .eq('area_id', areaId)
-        .order('order_index', { ascending: true });
+      const res = await fetch(`http://localhost:4000/area-fields/${areaId}`);
+
+      const data = await res.json();
 
       if (error) throw error;
       setFields(data || []);
@@ -90,14 +88,12 @@ const GestionCamposArea: React.FC<Props> = ({ areaId, areaName, onClose }) => {
 
   const loadSelectionOptions = async () => {
     try {
-      const { data, error } = await supabase
-        .from('selection_options')
-        .select('*')
-        .eq('area_id', areaId)
-        .order('group_name', { ascending: true })
-        .order('order_index', { ascending: true });
+      const response = await fetch(`http://localhost:4000/selection-options/${areaId}`);
+      const result = await response.json();
 
-      if (error) throw error;
+      if (!response.ok) throw new Error(result.error);
+
+      const data = result;
 
       // Verificar si existe la opción "Otros"
       const hasOtrosOption = data?.some(opt =>
@@ -106,30 +102,27 @@ const GestionCamposArea: React.FC<Props> = ({ areaId, areaName, onClose }) => {
 
       // Si no existe la opción "Otros", crearla automáticamente
       if (!hasOtrosOption) {
-        const { error: insertError } = await supabase
-          .from('selection_options')
-          .insert([{
+        const res = await fetch(`http://localhost:4000/selection-options`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
             area_id: areaId,
-            group_name: 'default',
-            option_value: 'otros',
-            option_label: 'Otros',
-            order_index: 999 // Ponerla al final
-          }]);
+            group_name: "default",
+            option_value: "otros",
+            option_label: "Otros",
+            order_index: 999
+          })
+        });
 
-        if (insertError) {
-          console.error('Error al crear opción "Otros":', insertError);
+        if (!res.ok) {
+          console.error('Error al crear opción "Otros"');
         } else {
           // Recargar las opciones para incluir "Otros"
-          const { data: updatedData, error: reloadError } = await supabase
-            .from('selection_options')
-            .select('*')
-            .eq('area_id', areaId)
-            .order('group_name', { ascending: true })
-            .order('order_index', { ascending: true });
-
-          if (!reloadError) {
-            setSelectionOptions(updatedData || []);
-          }
+          const response = await fetch(`http://localhost:4000/selection-options/${areaId}`);
+          const { data: updatedData } = await response.json();
+          setSelectionOptions(updatedData || []);
         }
       } else {
         setSelectionOptions(data || []);
@@ -213,19 +206,30 @@ const GestionCamposArea: React.FC<Props> = ({ areaId, areaName, onClose }) => {
       };
 
       if (editingField) {
-        const { error } = await supabase
-          .from('area_fields')
-          .update(fieldData)
-          .eq('id', editingField.id);
+        const res = await fetch(`http://localhost:4000/area-fields/${editingField.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(fieldData)
+        });
 
-        if (error) throw error;
+        const result = await res.json();
+
+        if (!res.ok) throw new Error(result.error);
         setSuccess('Campo actualizado correctamente');
       } else {
-        const { error } = await supabase
-          .from('area_fields')
-          .insert([fieldData]);
+        const res = await fetch('http://localhost:4000/area-fields', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(fieldData)
+        });
 
-        if (error) throw error;
+        const result = await res.json();
+
+        if (!res.ok) throw new Error(result.error);
         setSuccess('Campo creado correctamente');
       }
 
@@ -246,12 +250,13 @@ const GestionCamposArea: React.FC<Props> = ({ areaId, areaName, onClose }) => {
     }
 
     try {
-      const { error } = await supabase
-        .from('area_fields')
-        .delete()
-        .eq('id', field.id);
+      const res = await fetch(`http://localhost:4000/area-fields/${field.id}`, {
+        method: 'DELETE'
+      });
+      
+      const result = await res.json();
 
-      if (error) throw error;
+      if (!res.ok) throw new Error(result.error);
 
       setSuccess('Campo eliminado correctamente');
       await loadFields();
@@ -279,17 +284,23 @@ const GestionCamposArea: React.FC<Props> = ({ areaId, areaName, onClose }) => {
       // Generar valor automáticamente desde la etiqueta
       const autoValue = newSelectionOption.label.trim().toLowerCase().replace(/\s+/g, '_');
 
-      const { error: insertError } = await supabase
-        .from('selection_options')
-        .insert([{
+      const res = await fetch(`http://localhost:4000/selection-options`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
           area_id: areaId,
           group_name: defaultGroup,
           option_value: autoValue,
           option_label: newSelectionOption.label.trim(),
           order_index: orderIndex
-        }]);
+        })
+      });
 
-      if (insertError) throw insertError;
+      const result = await res.json();
+
+      if (!res.ok) throw new Error(result.error);
 
       setNewSelectionOption({ label: '', value: '' });
       setSuccess('Opción agregada correctamente');
@@ -311,12 +322,13 @@ const GestionCamposArea: React.FC<Props> = ({ areaId, areaName, onClose }) => {
     }
 
     try {
-      const { error } = await supabase
-        .from('selection_options')
-        .delete()
-        .eq('id', optionId);
+      const res = await fetch(`http://localhost:4000/selection-options/${optionId}`, {
+        method: 'DELETE'
+      });
 
-      if (error) throw error;
+      const result = await res.json();
+
+      if (!res.ok) throw new Error(result.error);
 
       setSuccess('Opción eliminada correctamente');
       setTimeout(() => setSuccess(''), 3000);
