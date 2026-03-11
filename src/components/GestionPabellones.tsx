@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
 import { IMAGE_CONFIG } from '../constants';
 
 interface Pabellon {
@@ -45,15 +44,15 @@ const GestionPabellones: React.FC = () => {
 
   const loadPabellones = async () => {
     try {
-      const { data, error } = await supabase
-        .from('pabellones')
-        .select('*')
-        .order('nombre', { ascending: true });
+      const res = await fetch('http://localhost:4000/pabellones/lista');
 
-      if (error) throw error;
+      if (!res.ok) {
+        throw new Error('Error al cargar los pabellones');
+      }
+
+      const data = await res.json();
       setPabellones(data || []);
 
-      // Cargar salones de cada pabellón
       if (data) {
         for (const pabellon of data) {
           await loadSalones(pabellon.id);
@@ -69,13 +68,14 @@ const GestionPabellones: React.FC = () => {
 
   const loadSalones = async (pabellonId: number) => {
     try {
-      const { data, error } = await supabase
-        .from('salones')
-        .select('*')
-        .eq('pabellon_id', pabellonId)
-        .order('nombre', { ascending: true });
+      const params = new URLSearchParams({ pabellonId: String(pabellonId) });
+      const res = await fetch(`http://localhost:4000/salones/filtrar?${params}`);
 
-      if (error) throw error;
+      if (!res.ok) {
+        throw new Error('Error al cargar los salones');
+      }
+
+      const data = await res.json();
       setSalones(prev => ({ ...prev, [pabellonId]: data || [] }));
     } catch (error) {
       console.error('Error al cargar salones:', error);
@@ -118,19 +118,26 @@ const GestionPabellones: React.FC = () => {
       };
 
       if (editingPabellon) {
-        const { error } = await supabase
-          .from('pabellones')
-          .update(pabellonData)
-          .eq('id', editingPabellon.id);
+        const res = await fetch(`http://localhost:4000/pabellones/editar/${editingPabellon.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(pabellonData),
+        });
 
-        if (error) throw error;
+        if (!res.ok) throw new Error('Error al actualizar el pabellón');
         setSuccess('Pabellón actualizado correctamente');
       } else {
-        const { error } = await supabase
-          .from('pabellones')
-          .insert([pabellonData]);
+        const res = await fetch('http://localhost:4000/pabellones/nuevo', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(pabellonData),
+        });
 
-        if (error) throw error;
+        if (!res.ok) throw new Error('Error al crear el pabellón');
         setSuccess('Pabellón creado correctamente');
       }
 
@@ -151,13 +158,12 @@ const GestionPabellones: React.FC = () => {
     }
 
     try {
-      const { error } = await supabase
-        .from('pabellones')
-        .delete()
-        .eq('id', pabellon.id);
+      const res = await fetch(`http://localhost:4000/pabellones/borrar/${pabellon.id}`, {
+        method: 'DELETE',
+      });
 
-      if (error) throw error;
-      
+      if (!res.ok) throw new Error('Error al eliminar el pabellón');
+
       setSuccess('Pabellón eliminado correctamente');
       await loadPabellones();
       setTimeout(() => setSuccess(''), 3000);
@@ -208,19 +214,26 @@ const GestionPabellones: React.FC = () => {
       };
 
       if (editingSalon) {
-        const { error } = await supabase
-          .from('salones')
-          .update(salonData)
-          .eq('id', editingSalon.id);
+        const res = await fetch(`http://localhost:4000/salones/editar/${editingSalon.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(salonData),
+        });
 
-        if (error) throw error;
+        if (!res.ok) throw new Error('Error al actualizar el salón');
         setSuccess('Salón actualizado correctamente');
       } else {
-        const { error } = await supabase
-          .from('salones')
-          .insert([salonData]);
+        const res = await fetch('http://localhost:4000/salones/nuevo', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(salonData),
+        });
 
-        if (error) throw error;
+        if (!res.ok) throw new Error('Error al crear el salón');
         setSuccess('Salón creado correctamente');
       }
 
@@ -241,13 +254,12 @@ const GestionPabellones: React.FC = () => {
     }
 
     try {
-      const { error } = await supabase
-        .from('salones')
-        .delete()
-        .eq('id', salon.id);
+      const res = await fetch(`http://localhost:4000/salones/borrar/${salon.id}`, {
+        method: 'DELETE',
+      });
 
-      if (error) throw error;
-      
+      if (!res.ok) throw new Error('Error al eliminar el salón');
+
       setSuccess('Salón eliminado correctamente');
       await loadSalones(salon.pabellon_id);
       setTimeout(() => setSuccess(''), 3000);

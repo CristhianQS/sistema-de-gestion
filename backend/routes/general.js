@@ -92,5 +92,9 @@ router.delete('/area-fields/:id', AreaFieldsController.deleteAreaField);
 router.get('/selection-options/:areaId', AreaFieldsController.getSelectionOptions);
 router.post('/selection-options', AreaFieldsController.createSelectionOption);
 router.delete('/selection-options/:id', AreaFieldsController.deleteSelectionOption);
+router.put('/notificaciones/marcar/:id', NotificacionesController.markNotiAsRead);
+router.put('/notificaciones/marcar-todas', NotificacionesController.markAllNotisAsRead);
+router.post('/alumnos/importar', AlumnosController.importAlumnos);
+router.get('/admin-users/lista', AdminUsersController.getAllWithAreas);
 
 module.exports = router;

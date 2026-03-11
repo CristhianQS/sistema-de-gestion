@@ -1,4 +1,4 @@
-import { supabase } from '../../lib/supabase';
+//import { supabase } from '../../lib/supabase';
 import type { Area } from '../../lib/supabase';
 import type { PaginationParams, PaginationResult } from '../../types/pagination';
 import { toPaginationRange, createPaginationResult, DEFAULT_PAGE_SIZE } from '../../types/pagination';
@@ -17,29 +17,21 @@ export async function getAllAreas(
   const { page = 1, pageSize = DEFAULT_PAGE_SIZE } = params || {};
   const { from, to } = toPaginationRange({ page, pageSize });
 
-  // Obtener el conteo total
-  const { count, error: countError } = await supabase
-    .from('areas')
-    .select('*', { count: 'exact', head: true });
+  const res = await fetch('http://localhost:4000/areas');
 
-  if (countError) {
-    console.error('Error al contar áreas:', countError);
-    throw countError;
+  if (!res.ok) {
+    console.error('Error al obtener áreas:');
+    throw new Error('Error al obtener áreas');
   }
 
-  // Obtener los datos paginados
-  const { data, error } = await supabase
-    .from('areas')
-    .select('*')
-    .order('name', { ascending: true })
-    .range(from, to);
+  const allAreas: Area[] = await res.json();
+  const orderedAreas = [...(allAreas || [])].sort((a, b) =>
+    (a.name || '').localeCompare(b.name || '', 'es')
+  );
 
-  if (error) {
-    console.error('Error al obtener áreas:', error);
-    throw error;
-  }
+  const paginatedAreas = orderedAreas.slice(from, to + 1);
 
-  return createPaginationResult(data || [], count || 0, { page, pageSize });
+  return createPaginationResult(paginatedAreas, orderedAreas.length, { page, pageSize });
 }
 
 /**

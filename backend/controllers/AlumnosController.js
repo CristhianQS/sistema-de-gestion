@@ -72,6 +72,25 @@ const AlumnosController = {
 
     res.json(reqdata);
   },
+
+  async importAlumnos(req, res) {
+  const alumnos = req.body;
+
+  if (!Array.isArray(alumnos) || !alumnos.length) {
+    return res.status(400).json({ error: 'No se recibieron alumnos para importar' });
+  }
+
+  try {
+    const reqdata = await AlumnosModel.importMany(alumnos);
+    res.json({
+      inserted: reqdata.length,
+      data: reqdata
+    });
+  } catch (error) {
+    console.error('Error al importar alumnos:', error);
+    res.status(500).json({ error: 'Error al importar alumnos' });
+  }
+},
 };
 
 module.exports = AlumnosController;

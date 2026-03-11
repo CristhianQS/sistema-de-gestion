@@ -9,11 +9,6 @@ const NotificacionesController = {
     }
 
     const reqdata = await NotificacionesModel.findByEmail(email);
-
-    if (!reqdata) {
-      return res.status(404).json({ error: 'No se encontraron notificaciones' });
-    }
-
     res.json(reqdata);
   },
 
@@ -25,11 +20,6 @@ const NotificacionesController = {
     }
 
     const reqdata = await NotificacionesModel.findUnread(email);
-
-    if (!reqdata) {
-      return res.status(404).json({ error: 'No se encontraron notificaciones' });
-    }
-
     res.json(reqdata);
   },
 
@@ -41,11 +31,29 @@ const NotificacionesController = {
     }
 
     const reqdata = await NotificacionesModel.countUnread(email);
+    res.json(reqdata);
+  },
+
+  async markNotiAsRead(req, res) {
+    const { id } = req.params;
+
+    const reqdata = await NotificacionesModel.markAsRead(id);
 
     if (!reqdata) {
-      return res.status(404).json({ error: 'No se encontraron notificaciones' });
+      return res.status(404).json({ error: 'Notificación no encontrada' });
     }
 
+    res.json(reqdata);
+  },
+
+  async markAllNotisAsRead(req, res) {
+    const { email } = req.query;
+
+    if (!email) {
+      return res.status(400).json({ error: 'User email is required' });
+    }
+
+    const reqdata = await NotificacionesModel.markAllAsRead(email);
     res.json(reqdata);
   },
 
@@ -62,7 +70,16 @@ const NotificacionesController = {
   },
 
   async insertNoti(req, res) {
-    const { user_email, user_name, title, message, type, related_submission_id, related_area_id } = req.body;
+    const {
+      user_email,
+      user_name,
+      title,
+      message,
+      type,
+      related_submission_id,
+      related_area_id
+    } = req.body;
+
     const newQuery = {
       user_email,
       user_name,

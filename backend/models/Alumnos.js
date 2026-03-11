@@ -144,7 +144,64 @@ const AlumnosModel = {
     const result = await pool.query(query, [searchTerm ? `'%${searchTerm}%'` : null]);
 
     return result.rows[0].count;
+  },
+
+  async importMany(alumnos) {
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const inserted = [];
+
+    for (const alumno of alumnos) {
+      const result = await client.query(
+        `INSERT INTO data_alumnos (
+          dni,
+          codigo,
+          estudiante,
+          carrera_profesional,
+          facultad,
+          modalidad,
+          ciclo,
+          grupo,
+          celular,
+          religion,
+          fecha_nacimiento,
+          correo,
+          pais
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        RETURNING *`,
+        [
+          alumno.dni || null,
+          alumno.codigo || null,
+          alumno.estudiante || null,
+          alumno.carrera_profesional || null,
+          alumno.facultad || null,
+          alumno.modalidad || null,
+          alumno.ciclo || null,
+          alumno.grupo || null,
+          alumno.celular || null,
+          alumno.religion || null,
+          alumno.fecha_nacimiento || null,
+          alumno.correo || null,
+          alumno.pais || null
+        ]
+      );
+
+      inserted.push(result.rows[0]);
+    }
+
+    await client.query('COMMIT');
+    return inserted;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
   }
+},
 };
 
 module.exports = AlumnosModel;

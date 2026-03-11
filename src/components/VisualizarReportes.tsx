@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
 import ModalDetalleReporte from './modals/ModalDetalleReporte';
 import ReviewIndicator from './ReviewIndicator';
-import { markAsReviewed } from '../services/database/submissions.service';
+import { getAllSubmissionsWithPriority, getAllAreasUnpaginated, getSubmissionById, updateSubmission, markAsReviewed } from '../services/database/submissions.service';
 import { FileText, Clock, Zap, CheckCircle, Search, Filter } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -28,11 +27,6 @@ interface Reporte {
   prioridad?: 'normal' | 'alta' | 'urgente';
 }
 
-interface Area {
-  id: number;
-  name: string;
-}
-
 const VisualizarReportes: React.FC = () => {
   const { user } = useAuth();
   const [reportes, setReportes] = useState<Reporte[]>([]);
@@ -48,34 +42,26 @@ const VisualizarReportes: React.FC = () => {
 
   const loadReportes = async () => {
     try {
-      const { data: reportesData, error: reportesError } = await supabase
-        .from('area_submissions')
-        .select('*, reviewed, reviewed_at, reviewed_by, es_docente, docente_dni, docente_nombre, docente_id, prioridad')
-        .order('prioridad', { ascending: false }) // Reportes de docentes (prioridad alta) primero
-        .order('submitted_at', { ascending: false });
+      const [reportesResponse, areasData] = await Promise.all([
+        getAllSubmissionsWithPriority({ page: 1, pageSize: 1000 }),
+        getAllAreasUnpaginated(),
+      ]);
 
-      if (reportesError) throw reportesError;
+      const reportesData = reportesResponse.data || [];
 
-      // Debug: Mostrar cuántos reportes de docentes hay
-      const docentesCount = reportesData?.filter(r => r.es_docente === true).length || 0;
-      const alumnosCount = reportesData?.filter(r => !r.es_docente).length || 0;
-      console.log(`📊 Total reportes: ${reportesData?.length || 0} | Docentes: ${docentesCount} | Alumnos: ${alumnosCount}`);
-
-      const { data: areasData, error: areasError } = await supabase
-        .from('areas')
-        .select('id, name');
-
-      if (areasError) throw areasError;
+      const docentesCount = reportesData.filter((reporte: any) => reporte.es_docente === true).length || 0;
+      const alumnosCount = reportesData.filter((reporte: any) => !reporte.es_docente).length || 0;
+      console.log(`📊 Total reportes: ${reportesData.length || 0} | Docentes: ${docentesCount} | Alumnos: ${alumnosCount}`);
 
       const areasMap: Record<number, string> = {};
-      areasData?.forEach((area: Area) => {
+      (areasData || []).forEach((area: any) => {
         areasMap[area.id] = area.name;
       });
 
-      const reportesConArea = reportesData?.map(reporte => ({
+      const reportesConArea = reportesData.map((reporte: any) => ({
         ...reporte,
         area_nombre: areasMap[reporte.area_id] || 'Área desconocida'
-      })) || [];
+      }));
 
       setReportes(reportesConArea);
     } catch (error) {
@@ -98,37 +84,25 @@ const VisualizarReportes: React.FC = () => {
 
   const handleUpdateStatus = async (reporteId: number, newStatus: string, estimatedTime?: string) => {
     try {
-      // Obtener el reporte actual para acceder a form_data
-      const { data: currentReport, error: fetchError } = await supabase
-        .from('area_submissions')
-        .select('form_data')
-        .eq('id', reporteId)
-        .single();
+      const currentReport = await getSubmissionById(reporteId);
 
-      if (fetchError) throw fetchError;
+      if (!currentReport) {
+        throw new Error('No se encontró el reporte');
+      }
 
       const updateData: any = { status: newStatus };
-
-      // Actualizar form_data con el tiempo estimado
-      const updatedFormData = { ...currentReport.form_data };
+      const updatedFormData = { ...(currentReport.form_data || {}) };
 
       if (newStatus === 'in_progress' && estimatedTime) {
         updatedFormData.estimated_time = estimatedTime;
       } else if (newStatus !== 'in_progress') {
-        // Remover estimated_time si no está en progreso
         delete updatedFormData.estimated_time;
       }
 
       updateData.form_data = updatedFormData;
 
-      const { error } = await supabase
-        .from('area_submissions')
-        .update(updateData)
-        .eq('id', reporteId);
+      await updateSubmission(reporteId, updateData);
 
-      if (error) throw error;
-
-      // ✅ Marcar como revisado automáticamente al cambiar estado
       const userEmail = user?.email || 'admin@upeu.edu.pe';
       await markAsReviewed(reporteId, userEmail);
 

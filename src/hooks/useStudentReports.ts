@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { getAllAreasUnpaginated } from '../services/database/areas.service';
+import { getSubmissionsByStudentCode } from '../services/database/submissions.service';
 
 interface StudentReport {
   id: number;
@@ -13,6 +14,12 @@ interface StudentReport {
   area_name?: string;
   area_description?: string;
   estimated_time?: string;
+}
+
+interface AreaInfo {
+  id: number;
+  name: string;
+  description?: string;
 }
 
 export const useStudentReports = () => {
@@ -37,52 +44,46 @@ export const useStudentReports = () => {
     setStudentInfo(null);
 
     try {
-      const code = parseInt(studentCode);
-      
-      if (isNaN(code)) {
+      const code = parseInt(studentCode, 10);
+
+      if (Number.isNaN(code)) {
         throw new Error('El código debe ser un número válido');
       }
 
-      // Buscar reportes del estudiante con información del área
-      const { data: reportsData, error: reportsError } = await supabase
-        .from('area_submissions')
-        .select(`
-          *,
-          areas:area_id (
-            name,
-            description
-          )
-        `)
-        .eq('alumno_codigo', code)
-        .order('submitted_at', { ascending: false });
+      const [reportsResponse, areas] = await Promise.all([
+        getSubmissionsByStudentCode(String(code), { page: 1, pageSize: 1000 }),
+        getAllAreasUnpaginated(),
+      ]);
 
-      if (reportsError) {
-        throw reportsError;
-      }
+      const reportsData = reportsResponse.data || [];
 
-      if (!reportsData || reportsData.length === 0) {
+      if (reportsData.length === 0) {
         setError('No se encontraron reportes para este código de estudiante');
         return;
       }
 
-      // Mapear los datos con la información del área
-      const mappedReports = reportsData.map((report: any) => ({
-        ...report,
-        area_name: report.areas?.name || 'Área desconocida',
-        area_description: report.areas?.description || ''
-      }));
+      const areaMap = new Map<number, AreaInfo>(
+        (areas || []).map((area: any) => [area.id, area])
+      );
+
+      const mappedReports = reportsData.map((report: any) => {
+        const area = areaMap.get(report.area_id);
+
+        return {
+          ...report,
+          area_name: area?.name || 'Área desconocida',
+          area_description: area?.description || '',
+        };
+      });
 
       setReports(mappedReports);
-      
-      // Guardar información del estudiante del primer reporte
-      if (mappedReports.length > 0) {
-        setStudentInfo({
-          nombre: mappedReports[0].alumno_nombre,
-          codigo: mappedReports[0].alumno_codigo,
-          carrera: mappedReports[0].form_data?.carrera || 'N/A'
-        });
-      }
 
+      const firstReport = mappedReports[0];
+      setStudentInfo({
+        nombre: firstReport.alumno_nombre,
+        codigo: firstReport.alumno_codigo,
+        carrera: firstReport.form_data?.carrera || 'N/A',
+      });
     } catch (err: any) {
       console.error('Error al buscar reportes:', err);
       setError(err.message || 'Error al buscar los reportes');

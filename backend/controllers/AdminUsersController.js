@@ -61,7 +61,17 @@ const AdminUsersController = {
     } catch (error) {
       res.status(500).json({ error: 'Error al eliminar administrador' });
     }
-  }
+  },
+
+  async getAllWithAreas(req, res) {
+    try {
+      const { role } = req.query;
+      const data = await AdminUsersModel.findAllWithAreas(role);
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: 'Error al obtener usuarios con áreas' });
+    }
+  },
 
 };
 

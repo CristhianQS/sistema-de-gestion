@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
 import ModalDetalleReporte from './modals/ModalDetalleReporte';
 import { useAuth } from '../context/AuthContext';
+import { getAreaById } from '../services/database/areas.service';
+import { getSubmissionsByArea, updateSubmission } from '../services/database/submissions.service';
 
 interface Reporte {
   id: number;
@@ -35,30 +36,20 @@ const VisualizarReportesOro: React.FC = () => {
     }
 
     try {
-      // Obtener nombre del área
-      const { data: areaData } = await supabase
-        .from('areas')
-        .select('name')
-        .eq('id', user.area_id)
-        .single();
+      const [areaData, reportesResponse] = await Promise.all([
+        getAreaById(user.area_id),
+        getSubmissionsByArea(user.area_id, { page: 1, pageSize: 1000 }),
+      ]);
 
       if (areaData) {
         setAreaNombre(areaData.name);
       }
 
-      // Cargar reportes del área asignada
-      const { data: reportesData, error: reportesError } = await supabase
-        .from('area_submissions')
-        .select('*')
-        .eq('area_id', user.area_id)
-        .order('submitted_at', { ascending: false });
-
-      if (reportesError) throw reportesError;
-
-      const reportesConArea = reportesData?.map(reporte => ({
+      const reportesData = reportesResponse.data || [];
+      const reportesConArea = reportesData.map((reporte: any) => ({
         ...reporte,
         area_nombre: areaData?.name || 'Área desconocida'
-      })) || [];
+      }));
 
       setReportes(reportesConArea);
     } catch (error) {
@@ -70,12 +61,7 @@ const VisualizarReportesOro: React.FC = () => {
 
   const handleUpdateStatus = async (reporteId: number, newStatus: string) => {
     try {
-      const { error } = await supabase
-        .from('area_submissions')
-        .update({ status: newStatus })
-        .eq('id', reporteId);
-
-      if (error) throw error;
+      await updateSubmission(reporteId, { status: newStatus });
       await loadReportes();
     } catch (error) {
       console.error('Error al actualizar estado:', error);

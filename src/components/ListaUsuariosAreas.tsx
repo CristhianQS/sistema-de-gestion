@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
 
 interface Area {
   id: number;
@@ -31,60 +30,20 @@ const ListaUsuariosAreas: React.FC = () => {
   const loadUsuarios = async () => {
     setLoading(true);
     try {
-      let query = supabase
-        .from('admin_user')
-        .select('*')
-        .order('name', { ascending: true });
+      let url = 'http://localhost:4000/admin-users/lista';
 
-      // Filtrar por rol si no es 'all'
       if (viewMode !== 'all') {
-        query = query.eq('role', viewMode);
+        url += `?role=${viewMode}`;
       }
 
-      const { data, error } = await query;
+      const res = await fetch(url);
 
-      if (error) throw error;
+      if (!res.ok) {
+        throw new Error('Error al cargar usuarios');
+      }
 
-      // Cargar las áreas asignadas a cada usuario
-      const usuariosConAreas = await Promise.all(
-        (data || []).map(async (usuario) => {
-          let areas: Area[] = [];
-
-          // Admin Plata y Admin Oro usan area_id directamente
-          if ((usuario.role === 'admin_plata' || usuario.role === 'admin_oro') && usuario.area_id) {
-            const { data: areaData } = await supabase
-              .from('areas')
-              .select('id, name')
-              .eq('id', usuario.area_id)
-              .single();
-
-            if (areaData) {
-              areas = [areaData];
-            }
-          }
-          // Otros roles pueden tener múltiples áreas en user_areas
-          else {
-            const { data: userAreasData } = await supabase
-              .from('user_areas')
-              .select('area_id')
-              .eq('user_id', usuario.id);
-
-            if (userAreasData && userAreasData.length > 0) {
-              const areaIds = userAreasData.map(ua => ua.area_id);
-              const { data: areasData } = await supabase
-                .from('areas')
-                .select('id, name')
-                .in('id', areaIds);
-
-              areas = areasData || [];
-            }
-          }
-
-          return { ...usuario, areas };
-        })
-      );
-
-      setUsuarios(usuariosConAreas);
+      const data = await res.json();
+      setUsuarios(data || []);
     } catch (error) {
       console.error('Error al cargar usuarios:', error);
     } finally {
@@ -127,7 +86,6 @@ const ListaUsuariosAreas: React.FC = () => {
     }
   };
 
-  // Filtrar usuarios por término de búsqueda
   const filteredUsuarios = usuarios.filter(usuario => {
     const searchLower = searchTerm.toLowerCase();
     return (
@@ -148,7 +106,6 @@ const ListaUsuariosAreas: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
         <h2 className="text-3xl font-bold text-gray-800">Lista de Usuarios y Áreas</h2>
         <p className="text-gray-600 mt-2">
@@ -156,7 +113,6 @@ const ListaUsuariosAreas: React.FC = () => {
         </p>
       </div>
 
-      {/* Pestañas de filtro */}
       <div className="flex flex-wrap gap-3">
         <button
           onClick={() => setViewMode('all')}
@@ -190,7 +146,6 @@ const ListaUsuariosAreas: React.FC = () => {
         </button>
       </div>
 
-      {/* Búsqueda */}
       <div className="relative">
         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
           <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -206,7 +161,6 @@ const ListaUsuariosAreas: React.FC = () => {
         />
       </div>
 
-      {/* Lista de usuarios */}
       {filteredUsuarios.length === 0 ? (
         <div className="bg-white rounded-xl p-12 text-center border border-gray-200 shadow-sm">
           <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -265,7 +219,6 @@ const ListaUsuariosAreas: React.FC = () => {
                       <div className="flex flex-wrap gap-2">
                         {usuario.areas.length > 0 ? (
                           usuario.areas.map((area) => {
-                            // Color del badge según el rol
                             const areaBadgeColor = usuario.role === 'admin_oro'
                               ? 'bg-yellow-100 text-yellow-700 border border-yellow-200'
                               : usuario.role === 'admin_plata'
@@ -299,7 +252,6 @@ const ListaUsuariosAreas: React.FC = () => {
         </div>
       )}
 
-      {/* Resumen */}
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">

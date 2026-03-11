@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { supabase } from '../lib/supabase';
 import * as XLSX from 'xlsx';
 
 interface DataAlumno {
@@ -43,7 +42,6 @@ const GestionDatosAlumnos: React.FC = () => {
   }, [searchTerm, filterFacultad, filterCarrera, alumnos]);
 
   useEffect(() => {
-    // Resetear a la página 1 cuando cambien los filtros
     setCurrentPage(1);
   }, [searchTerm, filterFacultad, filterCarrera, itemsPerPage]);
 
@@ -51,47 +49,17 @@ const GestionDatosAlumnos: React.FC = () => {
     try {
       console.log('Iniciando carga de alumnos...');
 
-      // Primero obtenemos el conteo total
-      const { count } = await supabase
-        .from('data_alumnos')
-        .select('*', { count: 'exact', head: true });
+      const res = await fetch('http://localhost:4000/alumnos/lista');
 
-      console.log('Total de registros en BD:', count);
-
-      if (!count || count === 0) {
-        setAlumnos([]);
-        return;
+      if (!res.ok) {
+        throw new Error('Error al obtener alumnos');
       }
 
-      // Cargar datos en lotes de 1000 registros
-      const batchSize = 1000;
-      const totalBatches = Math.ceil(count / batchSize);
-      let allData: DataAlumno[] = [];
+      const data = await res.json();
 
-      console.log(`Cargando ${count} registros en ${totalBatches} lotes...`);
-
-      for (let i = 0; i < totalBatches; i++) {
-        const start = i * batchSize;
-        const end = start + batchSize - 1;
-
-        console.log(`Cargando lote ${i + 1}/${totalBatches} (registros ${start}-${end})...`);
-
-        const { data, error } = await supabase
-          .from('data_alumnos')
-          .select('*')
-          .order('estudiante', { ascending: true })
-          .range(start, end);
-
-        if (error) {
-          console.error(`Error en lote ${i + 1}:`, error);
-          throw error;
-        }
-
-        if (data) {
-          allData = [...allData, ...data];
-          console.log(`Lote ${i + 1} cargado: ${data.length} registros. Total acumulado: ${allData.length}`);
-        }
-      }
+      const allData = [...(data || [])].sort((a, b) =>
+        (a.estudiante || '').localeCompare(b.estudiante || '')
+      );
 
       console.log('Todos los alumnos cargados exitosamente:', allData.length);
       setAlumnos(allData);
@@ -106,7 +74,6 @@ const GestionDatosAlumnos: React.FC = () => {
   const filterAlumnos = () => {
     let filtered = [...alumnos];
 
-    // Filtrar por término de búsqueda
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -119,12 +86,10 @@ const GestionDatosAlumnos: React.FC = () => {
       );
     }
 
-    // Filtrar por facultad
     if (filterFacultad !== 'all') {
       filtered = filtered.filter((alumno) => alumno.facultad === filterFacultad);
     }
 
-    // Filtrar por carrera
     if (filterCarrera !== 'all') {
       filtered = filtered.filter((alumno) => alumno.carrera_profesional === filterCarrera);
     }
@@ -142,7 +107,6 @@ const GestionDatosAlumnos: React.FC = () => {
     return Array.from(carreras);
   };
 
-  // Calcular paginación
   const totalPages = Math.ceil(filteredAlumnos.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
@@ -165,7 +129,6 @@ const GestionDatosAlumnos: React.FC = () => {
   };
 
   const downloadTemplate = () => {
-    // Crear plantilla con las columnas requeridas
     const template = [
       {
         dni: '12345678',
@@ -184,14 +147,9 @@ const GestionDatosAlumnos: React.FC = () => {
       }
     ];
 
-    // Crear worksheet
     const ws = XLSX.utils.json_to_sheet(template);
-
-    // Crear workbook
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Alumnos');
-
-    // Descargar archivo
     XLSX.writeFile(wb, 'plantilla_alumnos.xlsx');
   };
 
@@ -204,7 +162,6 @@ const GestionDatosAlumnos: React.FC = () => {
     setUploadSuccess('');
 
     try {
-      // Leer archivo Excel
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data);
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -216,7 +173,6 @@ const GestionDatosAlumnos: React.FC = () => {
         return;
       }
 
-      // Validar y preparar datos
       const alumnosToInsert = jsonData.map((row: any) => ({
         dni: row.dni ? String(row.dni) : null,
         codigo: row.codigo ? Number(row.codigo) : null,
@@ -233,17 +189,20 @@ const GestionDatosAlumnos: React.FC = () => {
         pais: row.pais || null
       }));
 
-      // Insertar en la base de datos
-      const { error } = await supabase
-        .from('data_alumnos')
-        .insert(alumnosToInsert);
+      const res = await fetch('http://localhost:4000/alumnos/importar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(alumnosToInsert)
+      });
 
-      if (error) throw error;
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null);
+        throw new Error(errorData?.error || 'Error al importar alumnos');
+      }
 
       setUploadSuccess(`Se agregaron ${alumnosToInsert.length} alumnos correctamente`);
       await loadAlumnos();
 
-      // Limpiar input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -267,7 +226,6 @@ const GestionDatosAlumnos: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex justify-between items-start">
         <div>
           <h2 className="text-3xl font-bold text-gray-800">Datos de Alumnos</h2>
@@ -305,7 +263,6 @@ const GestionDatosAlumnos: React.FC = () => {
         </div>
       </div>
 
-      {/* Mensajes de éxito/error */}
       {uploadError && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
           {uploadError}
@@ -317,10 +274,8 @@ const GestionDatosAlumnos: React.FC = () => {
         </div>
       )}
 
-      {/* Filtros y Búsqueda */}
       <div className="bg-white rounded-lg p-6 border border-gray-200">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Búsqueda */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Buscar
@@ -334,7 +289,6 @@ const GestionDatosAlumnos: React.FC = () => {
             />
           </div>
 
-          {/* Filtro Facultad */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Facultad
@@ -353,7 +307,6 @@ const GestionDatosAlumnos: React.FC = () => {
             </select>
           </div>
 
-          {/* Filtro Carrera */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Carrera Profesional
@@ -373,7 +326,6 @@ const GestionDatosAlumnos: React.FC = () => {
           </div>
         </div>
 
-        {/* Botón Limpiar Filtros y Selector de Items por Página */}
         <div className="mt-4 flex justify-between items-center">
           {(searchTerm || filterFacultad !== 'all' || filterCarrera !== 'all') && (
             <button
@@ -403,7 +355,6 @@ const GestionDatosAlumnos: React.FC = () => {
         </div>
       </div>
 
-      {/* Tabla de Alumnos */}
       {filteredAlumnos.length === 0 ? (
         <div className="bg-white rounded-lg p-12 text-center border border-gray-200">
           <svg className="w-16 h-16 text-gray-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -478,7 +429,6 @@ const GestionDatosAlumnos: React.FC = () => {
             </table>
           </div>
 
-          {/* Controles de Paginación */}
           {filteredAlumnos.length > 0 && (
             <div className="bg-gray-50 px-4 py-3 flex items-center justify-between border-t border-gray-200">
               <div className="flex-1 flex justify-between sm:hidden">
@@ -528,7 +478,6 @@ const GestionDatosAlumnos: React.FC = () => {
                       </svg>
                     </button>
 
-                    {/* Páginas */}
                     {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
                       let pageNumber;
                       if (totalPages <= 5) {
@@ -584,12 +533,10 @@ const GestionDatosAlumnos: React.FC = () => {
         </div>
       )}
 
-      {/* Modal de Detalles */}
       {selectedAlumno && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl border border-gray-200 max-h-[90vh] overflow-y-auto">
             <div className="p-6">
-              {/* Header */}
               <div className="flex justify-between items-start mb-6">
                 <div>
                   <h3 className="text-2xl font-bold text-gray-800">{selectedAlumno.estudiante || 'Sin nombre'}</h3>
@@ -605,7 +552,6 @@ const GestionDatosAlumnos: React.FC = () => {
                 </button>
               </div>
 
-              {/* Información Personal */}
               <div className="space-y-4">
                 <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                   <h4 className="text-lg font-bold text-gray-800 mb-3">Información Personal</h4>
@@ -637,7 +583,6 @@ const GestionDatosAlumnos: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Información Académica */}
                 <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                   <h4 className="text-lg font-bold text-gray-800 mb-3">Información Académica</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -665,7 +610,6 @@ const GestionDatosAlumnos: React.FC = () => {
                 </div>
               </div>
 
-              {/* Botón Cerrar */}
               <div className="mt-6">
                 <button
                   onClick={() => setSelectedAlumno(null)}
