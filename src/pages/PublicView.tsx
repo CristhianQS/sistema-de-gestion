@@ -1,73 +1,85 @@
-import React, { useState, useEffect } from 'react';
+import React, { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import ModalLogin from '../components/ModalLogin';
-import ModalVerificarAlumno from '../components/modals/ModalVerificarAlumno';
-import ModalFormularioArea from '../components/modals/ModalFormularioArea';
-import StudentReportsModal from '../components/StudentReportsModal';
+import { ArrowUpRight, ClipboardList, LogIn, MessageCircle, Search, X } from 'lucide-react';
+import ModalLogin from '../features/auth/components/ModalLogin';
+import ModalVerificarAlumno from '../features/alumnos/components/ModalVerificarAlumno';
+import ModalFormularioArea from '../features/areas/components/ModalFormularioArea';
+import StudentReportsModal from '../features/alumnos/components/StudentReportsModal';
 import ChatbotAsistente from '../features/chatbot/components/ChatbotAsistente';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../features/auth/context/AuthContext';
 import type { Area, DataAlumno } from '../lib/supabase';
 import type { Docente } from '../services/database/docentes.service';
-import { getAllAreasUnpaginated } from '../services/database';
+import { getAllAreasUnpaginated } from '../services/database/areas.service';
 import { IMAGE_CONFIG } from '../constants';
+import BrandLogo from '../components/BrandLogo';
 
-// Interfaz para usuario verificado (puede ser alumno o docente)
+// Usuario verificado (alumno o docente)
 interface VerifiedUser {
   data: DataAlumno | Docente;
   tipo: 'alumno' | 'docente';
 }
+
+const STEPS = [
+  { title: 'Elige el área', text: 'La que se encarga del problema.' },
+  { title: 'Verifícate', text: 'Con tu DNI o código.' },
+  { title: 'Envía', text: 'Describe qué pasó y dónde.' },
+];
+
+/** Quita tildes y pasa a minúsculas para que la búsqueda sea tolerante */
+const normalize = (s: string) =>
+  s
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase();
+
+const CardSkeleton = ({ wide }: { wide?: boolean }) => (
+  <li className={`h-56 animate-pulse rounded-[28px] bg-white/70 ${wide ? 'sm:col-span-2' : ''}`} />
+);
 
 const PublicView: React.FC = () => {
   const [isModalLoginOpen, setIsModalLoginOpen] = useState(false);
   const [isModalVerificarOpen, setIsModalVerificarOpen] = useState(false);
   const [isModalFormularioOpen, setIsModalFormularioOpen] = useState(false);
   const [isReportsModalOpen, setIsReportsModalOpen] = useState(false);
+  const [reportCode, setReportCode] = useState('');
   const [selectedArea, setSelectedArea] = useState<Area | null>(null);
   const [verifiedUser, setVerifiedUser] = useState<VerifiedUser | null>(null);
   const [areas, setAreas] = useState<Area[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [search, setSearch] = useState('');
+  const deferredSearch = useDeferredValue(search);
   const { user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    loadAreas();
+    getAllAreasUnpaginated()
+      .then(setAreas)
+      .catch((error) => {
+        console.error('Error al cargar áreas:', error);
+        setLoadError(true);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
-  // Redirigir si hay un usuario autenticado
+  // Con sesión iniciada, ir al panel (cada usuario ve solo sus módulos)
   useEffect(() => {
-    if (user) {
-      switch (user.role) {
-        case 'admin_black':
-          navigate('/admin/black', { replace: true });
-          break;
-        case 'admin_oro':
-          navigate('/admin/oro', { replace: true });
-          break;
-        case 'admin_plata':
-          navigate('/admin/plata', { replace: true });
-          break;
-      }
-    }
+    if (user) navigate('/admin', { replace: true });
   }, [user, navigate]);
 
-  const loadAreas = async () => {
-    try {
-      const data = await getAllAreasUnpaginated();
-      setAreas(data);
-    } catch (error) {
-      console.error('Error al cargar áreas:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const filteredAreas = useMemo(() => {
+    const q = normalize(deferredSearch.trim());
+    if (!q) return areas;
+    return areas.filter((a) => normalize(`${a.name} ${a.description ?? ''}`).includes(q));
+  }, [areas, deferredSearch]);
 
   const handleAreaClick = (area: Area) => {
     setSelectedArea(area);
     setIsModalVerificarOpen(true);
   };
 
-  const handleUserVerified = (user: VerifiedUser) => {
-    setVerifiedUser(user);
+  const handleUserVerified = (verified: VerifiedUser) => {
+    setVerifiedUser(verified);
     setIsModalVerificarOpen(false);
     setIsModalFormularioOpen(true);
   };
@@ -78,106 +90,237 @@ const PublicView: React.FC = () => {
     setVerifiedUser(null);
   };
 
-  return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Header con botones Mis Reportes y Acceso */}
-      <header className="sticky top-0 z-10 shadow-md" style={{ backgroundColor: '#023052' }}>
-        <div className="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-          <div className="flex items-center space-x-3">
-            <h1 className="text-xl font-bold text-white">Sistema UPEU</h1>
-          </div>
+  const openReports = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    setIsReportsModalOpen(true);
+  };
 
-          {/* Contenedor de botones */}
-          <div className="flex items-center gap-3">
-            {/* Botón Mis Reportes */}
-            <button
-              onClick={() => setIsReportsModalOpen(true)}
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-all font-medium shadow-md hover:shadow-lg"
-              title="Consultar mis reportes"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-              <span>Mis Reportes</span>
-            </button>
-
-            {/* Botón Acceso */}
-            <button
-              onClick={() => setIsModalLoginOpen(true)}
-              className="bg-white bg-opacity-20 backdrop-blur-sm text-white px-6 py-2 rounded-lg hover:bg-opacity-30 transition-all font-medium border border-white border-opacity-30"
-            >
-              Acceso
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Contenido principal */}
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        {/* Título */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-blue-600 mb-4">
-            Sistema de Gestión Universitaria
-          </h1>
-          <p className="text-gray-600 text-lg mb-2">
-            Selecciona un área y completa los formularios
-          </p>
-          <p className="text-gray-500">
-            Explora las diferentes áreas disponibles
-          </p>
-        </div>
-
-        {/* Grid de áreas */}
-        {loading ? (
-          <div className="flex justify-center items-center py-12">
-            <div className="text-gray-600">Cargando áreas...</div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {areas.map((area) => (
-              <div
-                key={area.id}
-                onClick={() => handleAreaClick(area)}
-                className="bg-white rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all cursor-pointer"
-              >
-                <div className="h-48 overflow-hidden bg-gray-200">
-                  <img
-                    src={area.image_url || IMAGE_CONFIG.PLACEHOLDER}
-                    alt={area.name}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.src = IMAGE_CONFIG.ERROR_PLACEHOLDER;
-                    }}
-                  />
+  // En escritorio va en la portada; en móvil, después de las áreas (lo principal primero)
+  const bento = (
+    <div className="grid grid-cols-2 gap-3">
+              <form onSubmit={openReports} className="glass-dark col-span-2 rounded-[28px] p-5 sm:p-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="font-display text-xl font-semibold">Sigue tu reporte</h2>
+                  <ClipboardList className="h-5 w-5 text-brand-200" />
                 </div>
-                <div className="p-6">
-                  <h3 className="text-xl font-bold text-gray-800 mb-2">{area.name}</h3>
-                  <p className="text-gray-600 text-sm">{area.description || 'Sin descripción'}</p>
-                  <button className="mt-4 w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium">
-                    Completar Formulario
+                <p className="mt-1 text-sm text-brand-100">Recibido, en proceso o resuelto: míralo con tu código de estudiante.</p>
+                <div className="mt-4 flex gap-2">
+                  <label className="flex-1">
+                    <span className="sr-only">Código de estudiante</span>
+                    <input
+                      inputMode="numeric"
+                      value={reportCode}
+                      onChange={(e) => setReportCode(e.target.value)}
+                      placeholder="Ej: 2020123456"
+                      className="w-full rounded-full border border-white/20 bg-white/10 px-4 py-2.5 text-sm text-white placeholder:text-brand-200/80 focus:border-white/50 focus:outline-none focus:ring-2 focus:ring-white/30"
+                    />
+                  </label>
+                  <button
+                    type="submit"
+                    className="rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-brand-900 transition-transform hover:scale-[1.03]"
+                  >
+                    Consultar
                   </button>
                 </div>
+              </form>
+  
+              <div className="glass-dark col-span-2 rounded-[28px] p-5 sm:col-span-1">
+                <h2 className="text-sm font-semibold text-white">Cómo funciona</h2>
+                <ol className="mt-3 space-y-2.5">
+                  {STEPS.map((s, i) => (
+                    <li key={s.title} className="flex gap-3">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white text-xs font-bold text-brand-900">
+                        {i + 1}
+                      </span>
+                      <span className="text-sm leading-tight">
+                        <span className="block font-medium text-white">{s.title}</span>
+                        <span className="text-brand-200">{s.text}</span>
+                      </span>
+                    </li>
+                  ))}
+                </ol>
               </div>
-            ))}
+  
+              <div className="glass-dark col-span-2 flex flex-col justify-between rounded-[28px] p-5 sm:col-span-1">
+                <MessageCircle className="h-6 w-6 text-brand-200" />
+                <div className="mt-6">
+                  <h2 className="text-sm font-semibold text-white">¿Dudas con el área?</h2>
+                  <p className="mt-1 text-sm text-brand-200">El asistente (abajo a la derecha) te ayuda a elegirla.</p>
+                </div>
+              </div>
+            </div>
+  );
+
+  return (
+    <div className="flex min-h-screen flex-col bg-campus-soft">
+      {/* ===================== Portada ===================== */}
+      <div className="bg-campus-glow pb-16 text-white sm:pb-20">
+        {/* Barra flotante de vidrio */}
+        <div className="sticky top-0 z-30 px-3 pt-3 sm:px-6">
+          <header className="glass-dark mx-auto flex h-14 max-w-6xl items-center justify-between rounded-full pl-2 pr-2 sm:pl-3">
+            <BrandLogo />
+            <nav className="flex items-center gap-1">
+              <button
+                onClick={() => openReports()}
+                className="flex items-center gap-2 rounded-full px-3.5 py-2 text-sm font-medium text-white transition-colors hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+              >
+                <ClipboardList className="h-4 w-4" />
+                <span className="hidden sm:inline">Mis reportes</span>
+              </button>
+              <button
+                onClick={() => setIsModalLoginOpen(true)}
+                className="flex items-center gap-2 rounded-full bg-white px-3.5 py-2 text-sm font-semibold text-brand-900 transition-transform hover:scale-[1.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                aria-label="Acceso para administradores"
+              >
+                <LogIn className="h-4 w-4" />
+                <span className="hidden sm:inline">Acceso</span>
+              </button>
+            </nav>
+          </header>
+        </div>
+
+        <section className="mx-auto grid max-w-6xl gap-8 px-4 pt-10 sm:px-6 sm:pt-14 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:items-start">
+          {/* Mensaje + búsqueda */}
+          <div>
+            <span className="glass-dark inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium text-brand-100">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden="true" />
+              Campus Juliaca · Mesa de reportes
+            </span>
+            <h1 className="mt-5 font-display text-[2.4rem] font-bold leading-[1.02] tracking-tight sm:text-6xl">
+              Algo falla en el campus.
+              <span className="block text-brand-200">Lo resolvemos juntos.</span>
+            </h1>
+            <p className="mt-5 max-w-lg text-[15px] leading-relaxed text-brand-100">
+              Elige el área responsable, cuéntanos qué pasó y sigue el avance de tu reporte hasta que quede resuelto.
+            </p>
+
+            <label className="glass-dark relative mt-8 flex max-w-xl items-center rounded-full p-1.5">
+              <span className="sr-only">Buscar un área</span>
+              <Search className="pointer-events-none absolute left-5 h-5 w-5 text-slate-400" />
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="¿Qué necesitas? Internet, limpieza, un proyector…"
+                className="w-full rounded-full border-0 bg-white py-3 pl-11 pr-4 text-[15px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-brand-300/40 [&::-webkit-search-cancel-button]:hidden"
+              />
+              {search ? (
+                <button
+                  onClick={() => setSearch('')}
+                  className="absolute right-4 rounded-full p-1.5 text-slate-500 hover:bg-slate-100"
+                  aria-label="Borrar búsqueda"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              ) : null}
+            </label>
+
+            {/* Atajos: un toque para abrir el área */}
+            {areas.length > 0 ? (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {areas.slice(0, 6).map((a) => (
+                  <button
+                    key={a.id}
+                    onClick={() => handleAreaClick(a)}
+                    className="glass-dark rounded-full px-3.5 py-1.5 text-sm text-white transition-colors hover:bg-white/20"
+                  >
+                    {a.name}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </div>
-        )}
+
+          {/* Bento (escritorio): consulta + cómo funciona + asistente */}
+          <div className="hidden lg:block">{bento}</div>
+        </section>
+      </div>
+
+      {/* ===================== Áreas ===================== */}
+      <main className="relative z-10 mx-auto -mt-8 w-full max-w-6xl flex-1 px-4 pb-16 sm:px-6">
+        <div className="glass-light rounded-[32px] p-4 sm:p-6">
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-2 px-1">
+            <div>
+              <h2 className="font-display text-2xl font-bold tracking-tight text-slate-900">Áreas de atención</h2>
+              <p className="text-sm text-slate-600">Toca un área para iniciar tu reporte.</p>
+            </div>
+            {!loading && !loadError ? (
+              <span className="rounded-full bg-brand-900/5 px-3 py-1 text-xs font-medium text-brand-900">
+                {filteredAreas.length === areas.length
+                  ? `${areas.length} ${areas.length === 1 ? 'área' : 'áreas'}`
+                  : `${filteredAreas.length} de ${areas.length}`}
+              </span>
+            ) : null}
+          </div>
+
+          {loadError ? (
+            <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+              No pudimos cargar las áreas. Revisa tu conexión y recarga la página.
+            </div>
+          ) : !loading && filteredAreas.length === 0 ? (
+            <div className="rounded-3xl border border-dashed border-slate-300 bg-white/60 px-6 py-12 text-center">
+              <p className="font-medium text-slate-900">
+                {areas.length === 0 ? 'Aún no hay áreas disponibles.' : `Ningún área coincide con «${search}».`}
+              </p>
+              {areas.length > 0 ? (
+                <button
+                  onClick={() => setSearch('')}
+                  className="mt-3 rounded-full bg-brand-900 px-4 py-2 text-sm font-medium text-white hover:bg-brand-800"
+                >
+                  Ver todas las áreas
+                </button>
+              ) : null}
+            </div>
+          ) : (
+            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {loading
+                ? Array.from({ length: 4 }, (_, i) => <CardSkeleton key={i} wide={i === 0} />)
+                : filteredAreas.map((area, i) => {
+                    // La primera área se destaca a doble ancho cuando no se está buscando
+                    const featured = i === 0 && !deferredSearch && filteredAreas.length > 2;
+                    return (
+                      <li key={area.id} className={featured ? 'sm:col-span-2' : ''}>
+                        <button
+                          onClick={() => handleAreaClick(area)}
+                          className="group relative block h-56 w-full overflow-hidden rounded-[28px] bg-brand-900 text-left shadow-sm ring-1 ring-black/5 transition duration-300 hover:-translate-y-0.5 hover:shadow-xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-400/50"
+                        >
+                          <img
+                            src={area.image_url || IMAGE_CONFIG.PLACEHOLDER}
+                            alt=""
+                            loading="lazy"
+                            className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            onError={(e) => {
+                              e.currentTarget.src = IMAGE_CONFIG.ERROR_PLACEHOLDER;
+                            }}
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-brand-950/70 via-brand-950/10 to-transparent" />
+                          <span className="glass-dark absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+                            <ArrowUpRight className="h-4 w-4" />
+                          </span>
+                          <div className="glass-photo absolute inset-x-0 bottom-0 px-5 py-4">
+                            <div className="font-display text-lg font-semibold text-white">{area.name}</div>
+                            <div className="line-clamp-1 text-sm text-white/80">
+                              {area.description || 'Reportes para esta área.'}
+                            </div>
+                          </div>
+                        </button>
+                      </li>
+                    );
+                  })}
+            </ul>
+          )}
+        </div>
+
+        <div className="bg-campus-glow mt-4 rounded-[32px] p-3 text-white lg:hidden">{bento}</div>
       </main>
 
-      {/* Modals */}
-      <ModalLogin
-        isOpen={isModalLoginOpen}
-        onClose={() => setIsModalLoginOpen(false)}
-      />
+      <footer className="mx-auto flex w-full max-w-6xl flex-col gap-1 px-4 pb-8 text-xs text-slate-500 sm:flex-row sm:justify-between sm:px-6">
+        <span>Universidad Peruana Unión · Campus Juliaca</span>
+        <span>Sistema de reportes del campus</span>
+      </footer>
+
+      {/* Modales */}
+      <ModalLogin isOpen={isModalLoginOpen} onClose={() => setIsModalLoginOpen(false)} />
 
       {selectedArea && (
         <ModalVerificarAlumno
@@ -203,10 +346,13 @@ const PublicView: React.FC = () => {
 
       <StudentReportsModal
         isOpen={isReportsModalOpen}
-        onClose={() => setIsReportsModalOpen(false)}
+        initialCode={reportCode}
+        onClose={() => {
+          setIsReportsModalOpen(false);
+          setReportCode('');
+        }}
       />
 
-      {/* Chatbot Asistente */}
       <ChatbotAsistente />
     </div>
   );

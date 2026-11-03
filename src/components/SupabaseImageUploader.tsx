@@ -121,13 +121,13 @@ const SupabaseImageUploader: React.FC<Props> = ({
         className={`w-full px-4 py-3 border-2 border-dashed rounded-lg transition-all ${
           uploading
             ? 'border-gray-600 bg-gray-700 cursor-not-allowed'
-            : 'border-gray-600 hover:border-purple-500 hover:bg-gray-700 cursor-pointer'
+            : 'border-gray-600 hover:border-brand-500 hover:bg-gray-700 cursor-pointer'
         }`}
       >
         <div className="flex flex-col items-center justify-center space-y-2">
           {uploading ? (
             <>
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-500"></div>
               <p className="text-sm text-gray-400">Subiendo... {uploadProgress}%</p>
             </>
           ) : (

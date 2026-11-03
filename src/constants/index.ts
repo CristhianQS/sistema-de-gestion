@@ -34,13 +34,7 @@ export const COLORS = {
 // TEXTOS Y ETIQUETAS
 // ============================================================================
 
-export const APP_NAME = 'Sistema UPEU';
-
-export const ROLE_LABELS: Record<string, string> = {
-  admin_black: 'Administrador Principal',
-  admin_oro: 'Administrador de Área',
-  admin_plata: 'Visualizador',
-};
+export const APP_NAME = 'UPeU Juliaca';
 
 export const STATUS_LABELS: Record<string, string> = {
   pending: 'Pendiente',
@@ -60,9 +54,7 @@ export const STATUS_COLORS: Record<string, string> = {
 
 export const ROUTES = {
   HOME: '/',
-  ADMIN_BLACK: '/admin/black',
-  ADMIN_ORO: '/admin/oro',
-  ADMIN_PLATA: '/admin/plata',
+  ADMIN: '/admin',
 } as const;
 
 // ============================================================================

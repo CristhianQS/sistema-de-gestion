@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App.tsx'
 import './index.css'
-import { AuthProvider } from './context/AuthContext.tsx'
+import { AuthProvider } from './features/auth/context/AuthContext.tsx'
 import ErrorBoundary from './components/ErrorBoundary.tsx'
 
 // Configurar React Query con opciones optimizadas para rendimiento

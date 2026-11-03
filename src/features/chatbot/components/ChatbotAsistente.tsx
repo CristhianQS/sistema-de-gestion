@@ -102,7 +102,7 @@ const ChatbotAsistente: React.FC = () => {
   useEffect(() => {
     if (isOpen && messages.length === 0) {
       // Mensaje de bienvenida más simple, esperando que el usuario salude primero
-      addBotMessage('¡Hola! 👋 Bienvenido al Asistente Virtual de UPEU. ¿En qué puedo ayudarte hoy?');
+      addBotMessage('¡Hola! 👋 Bienvenido al Asistente Virtual de la UPeU Juliaca. ¿En qué puedo ayudarte hoy?');
     }
   }, [isOpen]);
 
@@ -422,7 +422,7 @@ const ChatbotAsistente: React.FC = () => {
                     field.options = JSON.stringify(optionsArray);
                   }
                 }
-              } catch (e) {
+              } catch {
                 // No es JSON, es un nombre de grupo, cargar opciones
                 const { data: selectionOpts } = await supabase
                   .from('selection_options')
@@ -706,7 +706,7 @@ const ChatbotAsistente: React.FC = () => {
         );
         setIsTyping(false);
         addBotMessage(`Excelente elección: **${areaSeleccionada.name}** ✅\n\n${respuestaIA}`);
-      } catch (error) {
+      } catch {
         setIsTyping(false);
         addBotMessage(chatbotConfig.solicitudes.descripcionProblema(areaSeleccionada.name));
       }
@@ -937,7 +937,7 @@ const ChatbotAsistente: React.FC = () => {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 flex items-center justify-center"
+          className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-brand-700 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 flex items-center justify-center"
           title="Abrir chatbot"
         >
           <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -950,22 +950,22 @@ const ChatbotAsistente: React.FC = () => {
       {isOpen && (
         <div className="fixed bottom-6 right-6 top-[5vh] z-50 w-96 bg-white rounded-xl shadow-2xl flex flex-col overflow-hidden border border-gray-200">
           {/* Header verde delgado */}
-          <div className="h-2 bg-gradient-to-r from-green-600 to-green-500"></div>
+          <div className="h-2 bg-brand-700"></div>
 
           {/* Encabezado */}
           <div className="bg-white px-4 py-3 border-b border-gray-200 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center">
+              <div className="w-10 h-10 bg-brand-700 rounded-full flex items-center justify-center">
                 <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                 </svg>
               </div>
               <div>
                 <h3 className="font-semibold text-gray-800">Asistente Académico</h3>
-                <p className="text-xs text-green-600 flex items-center gap-1">
+                <p className="text-xs text-brand-600 flex items-center gap-1">
                   En línea
                   {aiEnabled && (
-                    <span className="ml-1 px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                    <span className="ml-1 px-2 py-0.5 bg-brand-100 text-brand-700 rounded-full text-xs font-medium">
                       🤖 IA
                     </span>
                   )}
@@ -992,12 +992,12 @@ const ChatbotAsistente: React.FC = () => {
                 <div
                   className={`max-w-[75%] px-3 py-2 rounded-lg ${
                     message.type === 'user'
-                      ? 'bg-gradient-to-br from-green-500 to-green-600 text-white rounded-tr-none'
+                      ? 'bg-brand-700 text-white rounded-tr-none'
                       : 'bg-white text-gray-800 rounded-tl-none shadow-md border border-gray-200'
                   }`}
                 >
                   <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                  <p className={`text-xs mt-1 ${message.type === 'user' ? 'text-green-100' : 'text-gray-400'}`}>
+                  <p className={`text-xs mt-1 ${message.type === 'user' ? 'text-brand-100' : 'text-gray-400'}`}>
                     {message.timestamp.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
@@ -1050,12 +1050,12 @@ const ChatbotAsistente: React.FC = () => {
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder="Escribe tu mensaje..."
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all"
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-200 transition-all"
                 />
                 <button
                   onClick={handleSend}
                   disabled={!inputValue.trim()}
-                  className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 text-white rounded-full hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  className="w-10 h-10 bg-brand-700 text-white rounded-full hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />

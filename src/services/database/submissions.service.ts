@@ -70,6 +70,28 @@ export async function getAllSubmissionsUnpaginated(): Promise<AreaSubmission[]> 
 }
 
 /**
+ * Todos los reportes de un área, sin paginar (filtrado en el servidor)
+ */
+export async function getSubmissionsByAreaUnpaginated(areaId: number): Promise<AreaSubmission[]> {
+  const { data, error } = await supabase
+    .from('area_submissions')
+    .select(`
+      *,
+      area:areas(id, name, description),
+      alumno:data_alumnos(id, codigo, estudiante)
+    `)
+    .eq('area_id', areaId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error al obtener reportes por área:', error);
+    throw error;
+  }
+
+  return data || [];
+}
+
+/**
  * Obtener reporte por ID
  */
 export async function getSubmissionById(id: number): Promise<AreaSubmission | null> {

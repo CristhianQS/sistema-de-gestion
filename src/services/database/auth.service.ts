@@ -1,4 +1,6 @@
 import { supabase } from '../../lib/supabase';
+import { ADMIN_PUBLIC_COLUMNS } from './admins.service';
+import type { AdminRole } from '../../types';
 
 /**
  * Servicio de acceso a datos para Autenticación
@@ -9,9 +11,10 @@ import { supabase } from '../../lib/supabase';
 export interface Admin {
   id: number;
   email: string;
-  password: string;
+  /** Solo se envía al crear/actualizar; las consultas nunca la devuelven */
+  password?: string;
   name: string;
-  role: 'admin_black' | 'admin_oro' | 'admin_plata';
+  role: AdminRole;
   area_id?: number;
   created_at?: string;
   area?: {
@@ -28,7 +31,7 @@ export async function getAllAdmins(): Promise<Admin[]> {
   const { data, error } = await supabase
     .from('admin_user')
     .select(`
-      *,
+      ${ADMIN_PUBLIC_COLUMNS},
       area:areas(id, name, description)
     `)
     .order('name', { ascending: true });
@@ -38,7 +41,7 @@ export async function getAllAdmins(): Promise<Admin[]> {
     throw error;
   }
 
-  return data || [];
+  return (data || []) as unknown as Admin[];
 }
 
 /**
@@ -48,7 +51,7 @@ export async function getAdminById(id: number): Promise<Admin | null> {
   const { data, error } = await supabase
     .from('admin_user')
     .select(`
-      *,
+      ${ADMIN_PUBLIC_COLUMNS},
       area:areas(id, name, description)
     `)
     .eq('id', id)
@@ -62,7 +65,7 @@ export async function getAdminById(id: number): Promise<Admin | null> {
     throw error;
   }
 
-  return data;
+  return data as unknown as Admin;
 }
 
 /**
@@ -73,7 +76,7 @@ export async function getAdminByEmail(email: string): Promise<Admin | null> {
   const { data, error } = await supabase
     .from('admin_user')
     .select(`
-      *,
+      ${ADMIN_PUBLIC_COLUMNS},
       area:areas(id, name, description)
     `)
     .eq('email', email)
@@ -87,7 +90,7 @@ export async function getAdminByEmail(email: string): Promise<Admin | null> {
     throw error;
   }
 
-  return data;
+  return data as unknown as Admin;
 }
 
 /**
@@ -99,7 +102,7 @@ export async function verifyAdminCredentials(email: string, password: string): P
   const { data, error } = await supabase
     .from('admin_user')
     .select(`
-      *,
+      ${ADMIN_PUBLIC_COLUMNS},
       area:areas(id, name, description)
     `)
     .eq('email', email)
@@ -114,7 +117,7 @@ export async function verifyAdminCredentials(email: string, password: string): P
     throw error;
   }
 
-  return data;
+  return data as unknown as Admin;
 }
 
 /**
@@ -125,7 +128,7 @@ export async function createAdmin(admin: Omit<Admin, 'id' | 'created_at' | 'area
     .from('admin_user')
     .insert([admin])
     .select(`
-      *,
+      ${ADMIN_PUBLIC_COLUMNS},
       area:areas(id, name, description)
     `)
     .single();
@@ -135,7 +138,7 @@ export async function createAdmin(admin: Omit<Admin, 'id' | 'created_at' | 'area
     throw error;
   }
 
-  return data;
+  return data as unknown as Admin;
 }
 
 /**
@@ -150,7 +153,7 @@ export async function updateAdmin(
     .update(updates)
     .eq('id', id)
     .select(`
-      *,
+      ${ADMIN_PUBLIC_COLUMNS},
       area:areas(id, name, description)
     `)
     .single();
@@ -160,7 +163,7 @@ export async function updateAdmin(
     throw error;
   }
 
-  return data;
+  return data as unknown as Admin;
 }
 
 /**
@@ -189,11 +192,11 @@ export async function deleteAdmin(id: number): Promise<void> {
 /**
  * Obtener administradores por rol
  */
-export async function getAdminsByRole(role: 'admin_black' | 'admin_oro' | 'admin_plata'): Promise<Admin[]> {
+export async function getAdminsByRole(role: AdminRole): Promise<Admin[]> {
   const { data, error } = await supabase
     .from('admin_user')
     .select(`
-      *,
+      ${ADMIN_PUBLIC_COLUMNS},
       area:areas(id, name, description)
     `)
     .eq('role', role)
@@ -204,7 +207,7 @@ export async function getAdminsByRole(role: 'admin_black' | 'admin_oro' | 'admin
     throw error;
   }
 
-  return data || [];
+  return (data || []) as unknown as Admin[];
 }
 
 /**
@@ -215,7 +218,7 @@ export async function getAdminsByArea(areaId: number): Promise<Admin[]> {
   const { data, error } = await supabase
     .from('admin_user')
     .select(`
-      *,
+      ${ADMIN_PUBLIC_COLUMNS},
       area:areas(id, name, description)
     `)
     .eq('area_id', areaId)
@@ -226,7 +229,7 @@ export async function getAdminsByArea(areaId: number): Promise<Admin[]> {
     throw error;
   }
 
-  return data || [];
+  return (data || []) as unknown as Admin[];
 }
 
 /**

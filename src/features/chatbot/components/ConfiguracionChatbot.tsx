@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useModuleAccess } from '../../auth/ModuleAccessContext';
 import { chatbotConfig, actualizarConfig } from '../config/chatbotPrompts';
 import { saveChatbotConfig, loadChatbotConfig, deleteChatbotConfig } from '../../../services/database/chatbot-config.service';
 
@@ -13,6 +14,7 @@ import { saveChatbotConfig, loadChatbotConfig, deleteChatbotConfig } from '../..
  * - Prompts del sistema de IA
  */
 const ConfiguracionChatbot: React.FC = () => {
+  const { canEdit } = useModuleAccess();
   const [config, setConfig] = useState(chatbotConfig);
   const [guardando, setGuardando] = useState(false);
   const [cargando, setCargando] = useState(true);
@@ -101,7 +103,7 @@ const ConfiguracionChatbot: React.FC = () => {
     return (
       <div className="max-w-6xl mx-auto p-6 flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-brand-600 mb-4"></div>
           <p className="text-gray-600">Cargando configuración...</p>
         </div>
       </div>
@@ -131,7 +133,8 @@ const ConfiguracionChatbot: React.FC = () => {
         </div>
       )}
 
-      <div className="space-y-6">
+      {/* Solo lectura: fieldset deshabilita todos los campos */}
+      <fieldset disabled={!canEdit} className="space-y-6">
         {/* MENSAJES DE BIENVENIDA */}
         <section className="border border-gray-200 rounded-lg p-6">
           <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
@@ -151,7 +154,7 @@ const ConfiguracionChatbot: React.FC = () => {
                   mensajes: { ...config.mensajes, bienvenida: e.target.value }
                 })}
                 rows={3}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                 placeholder="Mensaje de bienvenida al abrir el chat"
               />
             </div>
@@ -167,7 +170,7 @@ const ConfiguracionChatbot: React.FC = () => {
                   mensajes: { ...config.mensajes, codigoInvalido: e.target.value }
                 })}
                 rows={2}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                 placeholder="Mensaje cuando el código no es válido"
               />
             </div>
@@ -183,7 +186,7 @@ const ConfiguracionChatbot: React.FC = () => {
                   mensajes: { ...config.mensajes, codigoNoEncontrado: e.target.value }
                 })}
                 rows={3}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                 placeholder="Mensaje cuando no se encuentra el código en la BD"
               />
             </div>
@@ -209,7 +212,7 @@ const ConfiguracionChatbot: React.FC = () => {
                   solicitudes: { ...config.solicitudes, descripcionMuyCorta: e.target.value }
                 })}
                 rows={2}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                 placeholder="Mensaje cuando la descripción es muy corta"
               />
             </div>
@@ -225,7 +228,7 @@ const ConfiguracionChatbot: React.FC = () => {
                   solicitudes: { ...config.solicitudes, ubicacion: e.target.value }
                 })}
                 rows={4}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                 placeholder="Mensaje solicitando la ubicación del problema"
               />
             </div>
@@ -241,7 +244,7 @@ const ConfiguracionChatbot: React.FC = () => {
                   solicitudes: { ...config.solicitudes, ubicacionInvalida: e.target.value }
                 })}
                 rows={2}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                 placeholder="Mensaje cuando la ubicación es inválida"
               />
             </div>
@@ -269,7 +272,7 @@ const ConfiguracionChatbot: React.FC = () => {
                 })}
                 min="5"
                 max="100"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"
               />
               <p className="text-xs text-gray-500 mt-1">Caracteres mínimos requeridos</p>
             </div>
@@ -287,7 +290,7 @@ const ConfiguracionChatbot: React.FC = () => {
                 })}
                 min="1"
                 max="50"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"
               />
               <p className="text-xs text-gray-500 mt-1">Caracteres mínimos requeridos</p>
             </div>
@@ -301,7 +304,7 @@ const ConfiguracionChatbot: React.FC = () => {
                     ...config,
                     validacion: { ...config.validacion, permitirSoloNumerosCodigo: e.target.checked }
                   })}
-                  className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                  className="w-5 h-5 text-brand-600 border-gray-300 rounded focus:ring-2 focus:ring-brand-500"
                 />
                 <span className="text-sm font-medium text-gray-700">
                   Permitir solo números en código de estudiante
@@ -330,18 +333,18 @@ const ConfiguracionChatbot: React.FC = () => {
                   confirmaciones: { ...config.confirmaciones, creandoReporte: e.target.value }
                 })}
                 rows={2}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                 placeholder="Mensaje mientras se crea el reporte"
               />
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm text-blue-800 mb-2">
+            <div className="bg-brand-50 border border-brand-200 rounded-lg p-4">
+              <p className="text-sm text-brand-800 mb-2">
                 <strong>Nota:</strong> Los mensajes de "Reporte Creado" y "Error al Crear" son funciones dinámicas.
               </p>
-              <p className="text-xs text-blue-600">
+              <p className="text-xs text-brand-600">
                 Para modificarlos, edita directamente el archivo:
-                <code className="bg-blue-100 px-2 py-1 rounded ml-1">
+                <code className="bg-brand-100 px-2 py-1 rounded ml-1">
                   src/config/chatbotPrompts.ts
                 </code>
               </p>
@@ -350,17 +353,17 @@ const ConfiguracionChatbot: React.FC = () => {
         </section>
 
         {/* PROMPTS DEL SISTEMA (IA) */}
-        <section className="border border-purple-300 rounded-lg p-6 bg-gradient-to-br from-purple-50 to-pink-50">
+        <section className="border border-brand-300 rounded-lg p-6 bg-brand-700">
           <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
             <span className="text-2xl">🤖</span>
             Configuración de IA (GPT-4o-mini)
           </h3>
 
-          <div className="bg-purple-100 border border-purple-300 rounded-lg p-4 mb-4">
-            <p className="text-sm text-purple-900 font-medium">
+          <div className="bg-brand-100 border border-brand-300 rounded-lg p-4 mb-4">
+            <p className="text-sm text-brand-900 font-medium">
               ✨ Estos prompts controlan cómo se comporta GPT-4o-mini en el chatbot
             </p>
-            <p className="text-xs text-purple-700 mt-1">
+            <p className="text-xs text-brand-700 mt-1">
               Los cambios se aplicarán en las funciones de clasificación, mejora de descripciones y extracción de información.
             </p>
           </div>
@@ -377,7 +380,7 @@ const ConfiguracionChatbot: React.FC = () => {
                   sistemPrompts: { ...config.sistemPrompts, rol: e.target.value }
                 })}
                 rows={4}
-                className="w-full px-4 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white"
+                className="w-full px-4 py-2 border border-brand-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent bg-white"
                 placeholder="Define quién es el chatbot y cuál es su rol principal"
               />
               <p className="text-xs text-gray-500 mt-1">Este prompt define la identidad del asistente</p>
@@ -394,7 +397,7 @@ const ConfiguracionChatbot: React.FC = () => {
                   sistemPrompts: { ...config.sistemPrompts, objetivo: e.target.value }
                 })}
                 rows={3}
-                className="w-full px-4 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white"
+                className="w-full px-4 py-2 border border-brand-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent bg-white"
                 placeholder="Describe el objetivo principal del chatbot"
               />
               <p className="text-xs text-gray-500 mt-1">Qué debe lograr el asistente en cada interacción</p>
@@ -411,7 +414,7 @@ const ConfiguracionChatbot: React.FC = () => {
                   sistemPrompts: { ...config.sistemPrompts, tono: e.target.value }
                 })}
                 rows={2}
-                className="w-full px-4 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white"
+                className="w-full px-4 py-2 border border-brand-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent bg-white"
                 placeholder="Cómo debe comunicarse (formal, amigable, profesional, etc.)"
               />
               <p className="text-xs text-gray-500 mt-1">El estilo de comunicación que debe usar</p>
@@ -431,16 +434,17 @@ const ConfiguracionChatbot: React.FC = () => {
                   }
                 })}
                 rows={6}
-                className="w-full px-4 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-white font-mono text-sm"
+                className="w-full px-4 py-2 border border-brand-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent bg-white font-mono text-sm"
                 placeholder="- Restricción 1&#10;- Restricción 2&#10;- Restricción 3"
               />
               <p className="text-xs text-gray-500 mt-1">Límites y reglas que debe seguir (escribe cada restricción en una línea nueva)</p>
             </div>
           </div>
         </section>
-      </div>
+      </fieldset>
 
       {/* BOTONES DE ACCIÓN */}
+      {canEdit && (
       <div className="mt-8 flex gap-4 justify-end border-t pt-6">
         <button
           onClick={handleRestaurar}
@@ -451,23 +455,24 @@ const ConfiguracionChatbot: React.FC = () => {
         <button
           onClick={handleGuardar}
           disabled={guardando}
-          className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all font-medium shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-6 py-3 bg-brand-700 text-white rounded-lg hover:bg-brand-800 transition-all font-medium shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {guardando ? 'Guardando...' : 'Guardar Cambios'}
         </button>
       </div>
+      )}
 
       {/* INFORMACIÓN */}
-      <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+      <div className="mt-6 bg-brand-50 border border-brand-200 rounded-lg p-4">
         <div className="flex items-start gap-3">
-          <svg className="w-5 h-5 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5 text-brand-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
           <div>
-            <p className="text-sm text-blue-800 font-medium mb-1">
+            <p className="text-sm text-brand-800 font-medium mb-1">
               💾 Configuración Permanente
             </p>
-            <p className="text-sm text-blue-700">
+            <p className="text-sm text-brand-700">
               Los cambios se guardan permanentemente en la base de datos y se aplican automáticamente a todos los usuarios.
               El chatbot cargará esta configuración personalizada cada vez que se inicie.
             </p>

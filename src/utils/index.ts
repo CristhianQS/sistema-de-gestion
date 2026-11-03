@@ -5,28 +5,8 @@
  * en toda la aplicación
  */
 
-import type { AdminRole, SubmissionStatus } from '../types';
-import { ROUTES, STATUS_COLORS, STATUS_LABELS } from '../constants';
-
-// ============================================================================
-// UTILIDADES DE NAVEGACIÓN
-// ============================================================================
-
-/**
- * Obtiene la ruta correspondiente según el rol del administrador
- */
-export function getRouteByRole(role: AdminRole): string {
-  switch (role) {
-    case 'admin_black':
-      return ROUTES.ADMIN_BLACK;
-    case 'admin_oro':
-      return ROUTES.ADMIN_ORO;
-    case 'admin_plata':
-      return ROUTES.ADMIN_PLATA;
-    default:
-      return ROUTES.HOME;
-  }
-}
+import type { SubmissionStatus } from '../types';
+import { STATUS_COLORS, STATUS_LABELS } from '../constants';
 
 // ============================================================================
 // UTILIDADES DE FORMATO

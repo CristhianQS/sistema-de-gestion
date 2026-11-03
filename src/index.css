@@ -1,3 +1,88 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased;
+  }
+}
+
+/* Respeta la preferencia de reducir movimiento */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@layer components {
+  /* Cuadrícula fina sobre el azul institucional */
+  .bg-campus-grid {
+    background-color: #003366;
+    background-image:
+      linear-gradient(rgb(255 255 255 / 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(255 255 255 / 0.05) 1px, transparent 1px);
+    background-size: 32px 32px;
+    background-position: -1px -1px;
+  }
+
+  /* Azul institucional con halos de luz: da profundidad para el vidrio */
+  .bg-campus-glow {
+    background-color: #003366;
+    background-image:
+      radial-gradient(40rem 28rem at 85% -10%, rgb(82 136 192 / 0.55), transparent 60%),
+      radial-gradient(32rem 24rem at 5% 110%, rgb(47 110 171 / 0.45), transparent 60%),
+      linear-gradient(rgb(255 255 255 / 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(255 255 255 / 0.04) 1px, transparent 1px);
+    background-size: auto, auto, 32px 32px, 32px 32px;
+  }
+
+  /* Fondo claro con halos suaves (zona de contenido) */
+  .bg-campus-soft {
+    background-color: #f4f7fb;
+    background-image:
+      radial-gradient(36rem 22rem at 100% 0%, rgb(176 201 230 / 0.45), transparent 65%),
+      radial-gradient(30rem 20rem at 0% 40%, rgb(216 229 243 / 0.7), transparent 65%);
+  }
+
+  /* Vidrio sobre fondo oscuro (estilo Liquid Glass) */
+  .glass-dark {
+    background: rgb(255 255 255 / 0.1);
+    -webkit-backdrop-filter: blur(22px) saturate(170%);
+    backdrop-filter: blur(22px) saturate(170%);
+    border: 1px solid rgb(255 255 255 / 0.18);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.35),
+      inset 0 -1px 0 rgb(255 255 255 / 0.05),
+      0 12px 40px -12px rgb(0 15 40 / 0.45);
+  }
+
+  /* Vidrio sobre fondo claro */
+  .glass-light {
+    background: rgb(255 255 255 / 0.62);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    backdrop-filter: blur(22px) saturate(180%);
+    border: 1px solid rgb(255 255 255 / 0.8);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.9),
+      0 1px 2px rgb(0 31 63 / 0.04),
+      0 12px 32px -16px rgb(0 31 63 / 0.18);
+  }
+
+  /* Etiqueta de vidrio sobre fotos */
+  .glass-photo {
+    background: rgb(0 25 51 / 0.38);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
+    backdrop-filter: blur(16px) saturate(160%);
+    border-top: 1px solid rgb(255 255 255 / 0.22);
+  }
+}
+
+/* Reducir transparencia: el vidrio pasa a sólido para no perder contraste */
+@media (prefers-reduced-transparency: reduce) {
+  .glass-dark { background: #0a3f75; backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .glass-light { background: #ffffff; backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .glass-photo { background: rgb(0 25 51 / 0.85); backdrop-filter: none; -webkit-backdrop-filter: none; }
+}

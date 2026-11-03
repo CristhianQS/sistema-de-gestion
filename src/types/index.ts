@@ -17,7 +17,7 @@ export interface AdminUser {
   name: string | null;
   dni: string | null;
   area_id: number | null;
-  role: 'admin_black' | 'admin_oro' | 'admin_plata';
+  role: AdminRole;
 }
 
 export interface Area {
@@ -116,7 +116,8 @@ export interface Salon {
 // TIPOS DE ROLES Y AUTENTICACIÓN
 // ============================================================================
 
-export type AdminRole = 'admin_black' | 'admin_oro' | 'admin_plata';
+/** Roles nuevos + antiguos (válidos hasta ejecutar la migración SQL) */
+export type AdminRole = 'super_admin' | 'admin' | 'admin_black' | 'admin_oro' | 'admin_plata';
 
 export type SubmissionStatus = 'pending' | 'approved' | 'rejected';
 

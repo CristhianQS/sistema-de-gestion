@@ -5,15 +5,27 @@
  * para hacer el chatbot más inteligente y capaz de entender contexto.
  */
 
-import OpenAI from 'openai';
+import type OpenAI from 'openai';
 import { chatbotConfig } from '../config/chatbotPrompts';
 import type { Area, AreaField } from '../../../types';
 
-// Inicializar cliente de OpenAI
-const openai = new OpenAI({
-  apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true // Solo para desarrollo/demo
-});
+// El SDK de OpenAI se descarga solo si hay API key y en el primer uso.
+// Si no hay clave, lanzar aquí hace que cada función caiga en su respaldo.
+let openaiClient: Promise<OpenAI> | null = null;
+
+function getOpenAI(): Promise<OpenAI> {
+  if (!isOpenAIEnabled()) {
+    return Promise.reject(new Error('VITE_OPENAI_API_KEY no está configurada'));
+  }
+  openaiClient ??= import('openai').then(
+    ({ default: OpenAIClient }) =>
+      new OpenAIClient({
+        apiKey: import.meta.env.VITE_OPENAI_API_KEY,
+        dangerouslyAllowBrowser: true // Solo para desarrollo/demo
+      })
+  );
+  return openaiClient;
+}
 
 /**
  * Configuración de modelos
@@ -61,7 +73,7 @@ INSTRUCCIONES:
 
 Número del área:`;
 
-    const response = await openai.chat.completions.create({
+    const response = await (await getOpenAI()).chat.completions.create({
       model: MODELS.fast,
       messages: [
         {
@@ -115,7 +127,7 @@ Extrae:
 
 Responde en formato JSON válido.`;
 
-    const response = await openai.chat.completions.create({
+    const response = await (await getOpenAI()).chat.completions.create({
       model: MODELS.fast,
       messages: [
         {
@@ -185,7 +197,7 @@ ${contexto.paso ? `- Paso actual: ${contexto.paso}` : ''}
       }
     ];
 
-    const response = await openai.chat.completions.create({
+    const response = await (await getOpenAI()).chat.completions.create({
       model: MODELS.default,
       messages: [...mensajesSistema, ...conversacionHistorial],
       temperature: 0.7,
@@ -222,7 +234,7 @@ IMPORTANTE:
 
 Respuesta:`;
 
-    const response = await openai.chat.completions.create({
+    const response = await (await getOpenAI()).chat.completions.create({
       model: MODELS.default,
       messages: [
         {
@@ -290,7 +302,7 @@ Genera una respuesta breve (2-3 líneas) que sea:
 
 Respuesta:`;
 
-    const response = await openai.chat.completions.create({
+    const response = await (await getOpenAI()).chat.completions.create({
       model: MODELS.default,
       messages: [
         {
@@ -332,7 +344,7 @@ INSTRUCCIONES:
 
 Descripción mejorada:`;
 
-    const response = await openai.chat.completions.create({
+    const response = await (await getOpenAI()).chat.completions.create({
       model: MODELS.fast,
       messages: [
         {
@@ -373,7 +385,7 @@ INSTRUCCIONES:
 
 Ubicación:`;
 
-    const response = await openai.chat.completions.create({
+    const response = await (await getOpenAI()).chat.completions.create({
       model: MODELS.fast,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.1,
@@ -414,7 +426,7 @@ CRITERIOS DE URGENCIA:
 
 Responde SOLO: "urgente" o "no urgente"`;
 
-    const response = await openai.chat.completions.create({
+    const response = await (await getOpenAI()).chat.completions.create({
       model: MODELS.fast,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.2,
@@ -450,7 +462,7 @@ Descripción: ${reporte.descripcion}
 
 Resumen de 10 palabras:`;
 
-    const response = await openai.chat.completions.create({
+    const response = await (await getOpenAI()).chat.completions.create({
       model: MODELS.fast,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.3,
@@ -512,7 +524,7 @@ export async function detectarAreaPorPalabrasClave(
                   info += ` → OPCIONES: ${validOptions.join(', ')}`;
                 }
               }
-            } catch (e) {
+            } catch {
               // Si hay error al parsear, continuar sin opciones
             }
           });
@@ -557,7 +569,7 @@ Responde en formato JSON:
 
 Si no estás seguro (confianza < 70%), usa areaIndex: -1`;
 
-    const response = await openai.chat.completions.create({
+    const response = await (await getOpenAI()).chat.completions.create({
       model: MODELS.fast,
       messages: [
         {
@@ -621,7 +633,7 @@ Extrae la siguiente información en formato JSON:
   }
 }`;
 
-    const response = await openai.chat.completions.create({
+    const response = await (await getOpenAI()).chat.completions.create({
       model: MODELS.fast,
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.2,

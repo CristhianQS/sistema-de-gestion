@@ -41,7 +41,7 @@ export async function saveChatbotConfig(config: ChatbotConfig): Promise<void> {
       .from('chatbot_config')
       .select('id')
       .eq('config_key', CONFIG_KEY)
-      .single();
+      .maybeSingle();
 
     if (existing) {
       // Actualizar configuración existente
@@ -86,7 +86,7 @@ export async function loadChatbotConfig(): Promise<Partial<ChatbotConfig> | null
       .from('chatbot_config')
       .select('config_data')
       .eq('config_key', CONFIG_KEY)
-      .single();
+      .maybeSingle();
 
     if (error) {
       // PGRST116 = No se encontró el registro
@@ -115,9 +115,14 @@ export async function loadChatbotConfig(): Promise<Partial<ChatbotConfig> | null
       return null;
     }
 
+    if (!data) {
+      console.log('ℹ️ No hay configuración guardada, usando valores por defecto');
+      return null;
+    }
+
     console.log('✅ Configuración del chatbot cargada desde la base de datos');
     return data.config_data;
-  } catch (error: any) {
+  } catch {
     console.warn('⚠️ No se pudo cargar configuración personalizada, usando valores por defecto');
     return null;
   }
