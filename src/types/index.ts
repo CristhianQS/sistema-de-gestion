@@ -59,6 +59,9 @@ export interface DataAlumno {
   created_at?: string;
 }
 
+/** Respuestas del formulario de un reporte (claves dinámicas según el área) */
+export type ReportFormData = Record<string, unknown>;
+
 export interface AreaSubmission {
   id: number;
   area_id: number;
@@ -67,7 +70,7 @@ export interface AreaSubmission {
   alumno_codigo: number;
   alumno_nombre: string;
   codigo_alumno?: string; // Código del alumno como string
-  form_data: any;
+  form_data: ReportFormData;
   submitted_at: string;
   created_at: string;
   updated_at?: string;

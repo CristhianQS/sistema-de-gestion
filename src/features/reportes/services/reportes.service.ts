@@ -100,6 +100,21 @@ export async function updateReporteStatus(
     .update({ status: newStatus, form_data: formData })
     .eq('id', reporteId);
   if (error) throw error;
+
+  if (formData.canal === 'whatsapp') notificarEstado(reporteId);
+}
+
+/**
+ * Avisa por WhatsApp al autor del reporte (solo reportes creados por WhatsApp).
+ * No bloquea ni hace fallar el cambio de estado si el aviso no se puede enviar.
+ */
+export function notificarEstado(reporteId: number): void {
+  supabase.functions
+    .invoke('notificar-estado', { body: { id: reporteId } })
+    .then(({ error }) => {
+      if (error) console.warn('No se pudo avisar por WhatsApp:', error.message);
+    })
+    .catch((e) => console.warn('No se pudo avisar por WhatsApp:', e));
 }
 
 /** Cambio de estado simple, sin tocar form_data (vista Admin Oro). */

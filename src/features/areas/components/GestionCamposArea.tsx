@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../../lib/supabase';
+import { errorMessage } from '../../../utils/errors';
 
 interface AreaField {
   id?: number;
@@ -55,7 +56,8 @@ const GestionCamposArea: React.FC<Props> = ({ areaId, areaName, onClose }) => {
   // Estados para opciones de selección
   const [selectionOptions, setSelectionOptions] = useState<SelectionOption[]>([]);
   const [optionGroups, setOptionGroups] = useState<string[]>([]);
-  const [selectedGroup, setSelectedGroup] = useState<string>('');
+  // Solo se usa el setter: el grupo elegido se recuerda para el formulario de opciones
+  const [, setSelectedGroup] = useState<string>('');
   const [newSelectionOption, setNewSelectionOption] = useState({ label: '', value: '' });
 
   // Silenciar warnings de variables no leídas pero necesarias para setters
@@ -66,12 +68,7 @@ const GestionCamposArea: React.FC<Props> = ({ areaId, areaName, onClose }) => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  useEffect(() => {
-    loadFields();
-    loadSelectionOptions();
-  }, [areaId]);
-
-  const loadFields = async () => {
+  const loadFields = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('area_fields')
@@ -86,9 +83,9 @@ const GestionCamposArea: React.FC<Props> = ({ areaId, areaName, onClose }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [areaId]);
 
-  const loadSelectionOptions = async () => {
+  const loadSelectionOptions = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('selection_options')
@@ -138,13 +135,19 @@ const GestionCamposArea: React.FC<Props> = ({ areaId, areaName, onClose }) => {
       // Extraer nombres de grupos únicos
       const groups = [...new Set(data?.map(opt => opt.group_name) || [])];
       setOptionGroups(groups);
-      if (groups.length > 0 && !selectedGroup) {
-        setSelectedGroup(groups[0]);
+      // Setter funcional: no depende de selectedGroup (evita recargar al cambiar de grupo)
+      if (groups.length > 0) {
+        setSelectedGroup((prev) => prev || groups[0]);
       }
     } catch (error) {
       console.error('Error al cargar opciones de selección:', error);
     }
-  };
+  }, [areaId]);
+
+  useEffect(() => {
+    loadFields();
+    loadSelectionOptions();
+  }, [loadFields, loadSelectionOptions]);
 
   const handleOpenModal = (field?: AreaField) => {
     if (field) {
@@ -234,9 +237,9 @@ const GestionCamposArea: React.FC<Props> = ({ areaId, areaName, onClose }) => {
         handleCloseModal();
         setSuccess('');
       }, 1500);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error:', error);
-      setError(error.message || 'Error al guardar el campo');
+      setError(errorMessage(error, 'Error al guardar el campo'));
     }
   };
 
@@ -256,9 +259,9 @@ const GestionCamposArea: React.FC<Props> = ({ areaId, areaName, onClose }) => {
       setSuccess('Campo eliminado correctamente');
       await loadFields();
       setTimeout(() => setSuccess(''), 3000);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error:', error);
-      setError(error.message || 'Error al eliminar el campo');
+      setError(errorMessage(error, 'Error al eliminar el campo'));
       setTimeout(() => setError(''), 3000);
     }
   };
@@ -295,9 +298,9 @@ const GestionCamposArea: React.FC<Props> = ({ areaId, areaName, onClose }) => {
       setSuccess('Opción agregada correctamente');
       setTimeout(() => setSuccess(''), 3000);
       await loadSelectionOptions();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error:', error);
-      setError(error.message || 'Error al agregar la opción');
+      setError(errorMessage(error, 'Error al agregar la opción'));
       setTimeout(() => setError(''), 3000);
     }
   };
@@ -321,9 +324,9 @@ const GestionCamposArea: React.FC<Props> = ({ areaId, areaName, onClose }) => {
       setSuccess('Opción eliminada correctamente');
       setTimeout(() => setSuccess(''), 3000);
       await loadSelectionOptions();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error:', error);
-      setError(error.message || 'Error al eliminar la opción');
+      setError(errorMessage(error, 'Error al eliminar la opción'));
       setTimeout(() => setError(''), 3000);
     }
   };
@@ -607,7 +610,7 @@ const GestionCamposArea: React.FC<Props> = ({ areaId, areaName, onClose }) => {
                   <select
                     value={formData.field_type}
                     onChange={(e) => {
-                      const newType = e.target.value as any;
+                      const newType = e.target.value as typeof formData.field_type;
                       // Si selecciona "select", automáticamente asignar el grupo "default"
                       if (newType === 'select') {
                         setFormData({ ...formData, field_type: newType, options: 'default' });

@@ -31,7 +31,7 @@ const StudentReportsModal = ({ isOpen, onClose, initialCode }: StudentReportsMod
       setStudentCode(initialCode.trim());
       fetchReportsByCode(initialCode.trim());
     }
-  }, [isOpen]);
+  }, [isOpen, initialCode, clearReports, fetchReportsByCode]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -191,10 +191,10 @@ const StudentReportsModal = ({ isOpen, onClose, initialCode }: StudentReportsMod
                             </td>
                             <td className="px-4 py-3">
                               <div className="text-sm text-gray-700">
-                                {report.form_data.pabellon_nombre && (
+                                {typeof report.form_data.pabellon_nombre === 'string' && (
                                   <div>{report.form_data.pabellon_nombre}</div>
                                 )}
-                                {report.form_data.salon_nombre && (
+                                {typeof report.form_data.salon_nombre === 'string' && (
                                   <div className="text-xs text-gray-500">{report.form_data.salon_nombre}</div>
                                 )}
                               </div>

@@ -1,7 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { Suspense, lazy, useState, useEffect, useCallback } from 'react';
 import { useModuleAccess } from '../../auth/ModuleAccessContext';
 import { supabase } from '../../../lib/supabase';
 import { IMAGE_CONFIG } from '../../../constants';
+import { errorMessage } from '../../../utils/errors';
+import { QrCode } from 'lucide-react';
+
+// El generador de QR se descarga solo al abrir el modal
+const QrSalonModal = lazy(() => import('./QrSalonModal'));
 
 interface Pabellon {
   id: number;
@@ -40,34 +45,34 @@ const GestionPabellones: React.FC = () => {
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [qr, setQr] = useState<{ pabellonNombre: string; salon: Salon } | null>(null);
 
-  useEffect(() => {
-    loadPabellones();
-  }, []);
-
-  const loadPabellones = async () => {
+  // Pabellones y todos los salones en 2 consultas paralelas (antes: 1 consulta por pabellón, en serie)
+  const loadPabellones = useCallback(async () => {
     try {
-      const { data, error } = await supabase
-        .from('pabellones')
-        .select('*')
-        .order('nombre', { ascending: true });
+      const [pabRes, salRes] = await Promise.all([
+        supabase.from('pabellones').select('id, nombre, descripcion, imagen_url').order('nombre', { ascending: true }),
+        supabase.from('salones').select('id, pabellon_id, nombre, capacidad, descripcion').order('nombre', { ascending: true }),
+      ]);
+      if (pabRes.error) throw pabRes.error;
+      if (salRes.error) throw salRes.error;
 
-      if (error) throw error;
-      setPabellones(data || []);
-
-      // Cargar salones de cada pabellón
-      if (data) {
-        for (const pabellon of data) {
-          await loadSalones(pabellon.id);
-        }
-      }
+      setPabellones(pabRes.data ?? []);
+      const porPabellon: Record<number, Salon[]> = {};
+      for (const p of pabRes.data ?? []) porPabellon[p.id] = [];
+      for (const s of salRes.data ?? []) (porPabellon[s.pabellon_id] ??= []).push(s);
+      setSalones(porPabellon);
     } catch (error) {
       console.error('Error al cargar pabellones:', error);
       setError('Error al cargar los pabellones');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadPabellones();
+  }, [loadPabellones]);
 
   const loadSalones = async (pabellonId: number) => {
     try {
@@ -141,9 +146,9 @@ const GestionPabellones: React.FC = () => {
         setIsModalPabellonOpen(false);
         setSuccess('');
       }, 1500);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error:', error);
-      setError(error.message || 'Error al guardar el pabellón');
+      setError(errorMessage(error, 'Error al guardar el pabellón'));
     }
   };
 
@@ -163,9 +168,9 @@ const GestionPabellones: React.FC = () => {
       setSuccess('Pabellón eliminado correctamente');
       await loadPabellones();
       setTimeout(() => setSuccess(''), 3000);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error:', error);
-      setError(error.message || 'Error al eliminar el pabellón');
+      setError(errorMessage(error, 'Error al eliminar el pabellón'));
       setTimeout(() => setError(''), 3000);
     }
   };
@@ -231,9 +236,9 @@ const GestionPabellones: React.FC = () => {
         setIsModalSalonOpen(false);
         setSuccess('');
       }, 1500);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error:', error);
-      setError(error.message || 'Error al guardar el salón');
+      setError(errorMessage(error, 'Error al guardar el salón'));
     }
   };
 
@@ -253,9 +258,9 @@ const GestionPabellones: React.FC = () => {
       setSuccess('Salón eliminado correctamente');
       await loadSalones(salon.pabellon_id);
       setTimeout(() => setSuccess(''), 3000);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error:', error);
-      setError(error.message || 'Error al eliminar el salón');
+      setError(errorMessage(error, 'Error al eliminar el salón'));
       setTimeout(() => setError(''), 3000);
     }
   };
@@ -388,6 +393,14 @@ const GestionPabellones: React.FC = () => {
                         <div className="flex justify-between items-start mb-2">
                           <h5 className="font-bold text-gray-800 text-lg">{salon.nombre}</h5>
                           <div className="flex space-x-1">
+                            <button
+                              onClick={() => setQr({ pabellonNombre: pabellon.nombre, salon })}
+                              className="text-brand-700 hover:text-brand-900"
+                              title="Código QR para reportar desde este salón"
+                              aria-label={`Código QR de ${salon.nombre}`}
+                            >
+                              <QrCode className="h-4 w-4" />
+                            </button>
                             {canEdit && (
                               <button
                                 onClick={() => handleOpenModalSalon(pabellon, salon)}
@@ -629,6 +642,12 @@ const GestionPabellones: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {qr && (
+        <Suspense fallback={null}>
+          <QrSalonModal pabellonNombre={qr.pabellonNombre} salon={qr.salon} onClose={() => setQr(null)} />
+        </Suspense>
       )}
     </div>
   );

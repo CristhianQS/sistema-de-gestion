@@ -56,7 +56,7 @@ export function showNotification(
     tag?: string;
     requireInteraction?: boolean;
     silent?: boolean;
-    data?: any;
+    data?: unknown;
   }
 ): Notification | null {
   if (!isSupported()) {

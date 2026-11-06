@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { BriefcaseBusiness, Check, Clock, ExternalLink, GraduationCap, MapPin, Sparkles, X } from 'lucide-react';
+import { BriefcaseBusiness, Check, Clock, ExternalLink, GraduationCap, MapPin, MessageCircle, Sparkles, Star, X } from 'lucide-react';
 import { getFieldsByAreaId } from '../../../services/database/area-fields.service';
 
 type Status = 'pending' | 'in_progress' | 'resolved';
@@ -56,7 +56,11 @@ const TIME_OPTIONS = [
 const timeLabel = (v: string) => TIME_OPTIONS.find((o) => o.value === v)?.label ?? v;
 
 /** Claves internas que no se muestran como «respuestas» */
-const HIDDEN_KEYS = new Set(['descripcion', 'estimated_time', 'created_by', 'ia_metadata', 'ai_generated', 'ubicacion']);
+const HIDDEN_KEYS = new Set([
+  'descripcion', 'estimated_time', 'created_by', 'ia_metadata', 'ai_generated', 'ubicacion',
+  // WhatsApp: datos internos del canal y la encuesta (se muestran como etiquetas)
+  'canal', 'telefono', 'whatsapp_project_id', 'satisfaccion', 'satisfaccion_at',
+]);
 const isHidden = (key: string) =>
   HIDDEN_KEYS.has(key) || key.startsWith('pabellon_') || key.startsWith('salon_') || key.endsWith('_otros_text');
 
@@ -151,6 +155,9 @@ const ModalDetalleReporte: React.FC<Props> = ({ isOpen, onClose, reporte, onUpda
   const descripcion = typeof fd.descripcion === 'string' ? fd.descripcion : '';
   const estimated = typeof fd.estimated_time === 'string' ? fd.estimated_time : '';
   const viaAsistente = fd.created_by === 'ia_chatbot' || fd.ai_generated === true;
+  const viaWhatsApp = fd.canal === 'whatsapp';
+  const telefono = typeof fd.telefono === 'string' ? fd.telefono : '';
+  const satisfaccion = typeof fd.satisfaccion === 'number' ? fd.satisfaccion : null;
   const currentStep = STEPS.findIndex((s) => s.status === reporte.status);
   const nombre = reporte.es_docente && reporte.docente_nombre ? reporte.docente_nombre : reporte.alumno_nombre;
   const dni = reporte.es_docente && reporte.docente_dni ? reporte.docente_dni : reporte.alumno_dni;
@@ -198,6 +205,21 @@ const ModalDetalleReporte: React.FC<Props> = ({ isOpen, onClose, reporte, onUpda
               {viaAsistente ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-0.5 text-slate-700">
                   <Sparkles className="h-3 w-3" /> Enviado con el asistente
+                </span>
+              ) : null}
+              {viaWhatsApp ? (
+                <a
+                  href={telefono ? `https://wa.me/${telefono}` : undefined}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-emerald-800 hover:underline"
+                >
+                  <MessageCircle className="h-3 w-3" /> WhatsApp{telefono ? ` · +${telefono}` : ''}
+                </a>
+              ) : null}
+              {satisfaccion ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-amber-800" title="Calificación del usuario">
+                  <Star className="h-3 w-3 fill-current" /> {satisfaccion}/5
                 </span>
               ) : null}
               <span className="text-slate-400">#{reporte.id}</span>

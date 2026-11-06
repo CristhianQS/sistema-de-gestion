@@ -109,7 +109,7 @@ const ModalVerificarAlumno: React.FC<Props> = ({ isOpen, onClose, onVerified, ar
       onVerified({ data, tipo: 'alumno' });
       setSearchValue('');
       setError('');
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error exception:', error);
       setError('Error inesperado al verificar el usuario');
     } finally {

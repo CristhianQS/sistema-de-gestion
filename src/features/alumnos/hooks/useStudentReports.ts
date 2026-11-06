@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { supabase } from '../../../lib/supabase';
+import { errorMessage } from '../../../utils/errors';
+import type { ReportFormData } from '../../../types';
 
 interface StudentReport {
   id: number;
@@ -7,7 +9,7 @@ interface StudentReport {
   alumno_codigo: number;
   alumno_nombre: string;
   alumno_dni: string;
-  form_data: any;
+  form_data: ReportFormData;
   submitted_at: string;
   status: string;
   area_name?: string;
@@ -25,7 +27,8 @@ export const useStudentReports = () => {
     carrera: string;
   } | null>(null);
 
-  const fetchReportsByCode = async (studentCode: string) => {
+  // useCallback: funciones estables para usarlas como dependencias de efectos
+  const fetchReportsByCode = useCallback(async (studentCode: string) => {
     if (!studentCode || studentCode.trim() === '') {
       setError('Por favor ingresa un código válido');
       return;
@@ -66,7 +69,7 @@ export const useStudentReports = () => {
       }
 
       // Mapear los datos con la información del área
-      const mappedReports = reportsData.map((report: any) => ({
+      const mappedReports = reportsData.map((report) => ({
         ...report,
         area_name: report.areas?.name || 'Área desconocida',
         area_description: report.areas?.description || ''
@@ -83,13 +86,13 @@ export const useStudentReports = () => {
         });
       }
 
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error al buscar reportes:', err);
-      setError(err.message || 'Error al buscar los reportes');
+      setError(errorMessage(err, 'Error al buscar los reportes'));
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const getStatusColor = (status: string): string => {
     switch (status.toLowerCase()) {
@@ -124,11 +127,11 @@ export const useStudentReports = () => {
     }
   };
 
-  const clearReports = () => {
+  const clearReports = useCallback(() => {
     setReports([]);
     setStudentInfo(null);
     setError(null);
-  };
+  }, []);
 
   return {
     loading,

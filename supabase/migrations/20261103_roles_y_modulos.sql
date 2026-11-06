@@ -38,7 +38,7 @@ end $$;
 create table if not exists public.admin_modules (
   user_id    bigint not null references public.admin_user(id) on delete cascade,
   module_key text   not null check (module_key in
-               ('reportes', 'areas', 'pabellones', 'alumnos', 'docentes', 'chatbot')),
+               ('reportes', 'areas', 'pabellones', 'alumnos', 'docentes', 'chatbot', 'whatsapp')),
   access     text   not null check (access in ('view', 'edit')),
   created_at timestamptz not null default now(),
   primary key (user_id, module_key)

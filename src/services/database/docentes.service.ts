@@ -1,4 +1,5 @@
 import { supabase } from '../../lib/supabase';
+import { errorMessage } from '../../utils/errors';
 
 export interface Docente {
   id?: number;
@@ -188,11 +189,11 @@ export async function importDocentes(docentes: Omit<Docente, 'id' | 'created_at'
       }
 
       results.success++;
-    } catch (error: any) {
+    } catch (error) {
       results.errors.push({
         row: i + 2, // +2 porque fila 1 es header y el índice empieza en 0
         dni: docente.dni,
-        error: error.message || 'Error desconocido'
+        error: errorMessage(error, 'Error desconocido')
       });
     }
   }

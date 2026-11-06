@@ -1,5 +1,8 @@
 import React, { useDeferredValue, useEffect, useMemo, useState } from 'react';
-import { BriefcaseBusiness, Clock, FileText, GraduationCap, IdCard, RefreshCw, Search, Sparkles, X } from 'lucide-react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { AlarmClock, BriefcaseBusiness, Clock, FileText, GraduationCap, IdCard, MessageCircle, RefreshCw, Search, Sparkles, Star, X } from 'lucide-react';
+import { supabase } from '../../../lib/supabase';
+import { duracionCorta, slaDe } from '../sla';
 import { getReportesConArea, updateReporteStatus } from '../services/reportes.service';
 import ModalDetalleReporte from './ModalDetalleReporte';
 import ReviewIndicator from './ReviewIndicator';
@@ -36,7 +39,7 @@ interface Props {
 }
 
 type Status = Reporte['status'];
-type Filter = 'all' | 'docentes' | 'alumnos' | Status;
+type Filter = 'all' | 'docentes' | 'alumnos' | 'vencidos' | Status;
 
 /** Orden dentro de cada grupo: pendientes primero, luego en proceso, luego resueltos; los más recientes arriba */
 const STATUS_ORDER: Record<Status, number> = { pending: 0, in_progress: 1, resolved: 2 };
@@ -117,9 +120,6 @@ function Steps({ status }: { status: Status }) {
 const VisualizarReportes: React.FC<Props> = ({ areaIds }) => {
   const { user } = useAuth();
   const { canEdit } = useModuleAccess();
-  const [reportes, setReportes] = useState<Reporte[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   // Se guarda el id (no una copia): así el modal ve el estado actualizado tras guardar
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [openWithTimePicker, setOpenWithTimePicker] = useState(false);
@@ -127,21 +127,41 @@ const VisualizarReportes: React.FC<Props> = ({ areaIds }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const deferredSearch = useDeferredValue(searchTerm);
 
+  // React Query: caché compartida y recarga en segundo plano. Realtime invalida la
+  // consulta cuando cambia un reporte; si Realtime no está activo, recarga cada minuto.
+  const queryClient = useQueryClient();
+  const {
+    data: reportes = [],
+    isLoading: loading,
+    isFetching: refreshing,
+    refetch,
+  } = useQuery({
+    queryKey: ['reportes', areaIds],
+    queryFn: () => getReportesConArea<Reporte>(areaIds),
+    refetchInterval: 60_000,
+  });
   const loadReportes = async () => {
-    try {
-      setReportes(await getReportesConArea<Reporte>(areaIds));
-    } catch (error) {
-      console.error('Error al cargar reportes:', error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
+    await refetch();
   };
 
   useEffect(() => {
-    loadReportes();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [areaIds]);
+    const canal = supabase
+      .channel('reportes-cambios')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'area_submissions' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['reportes'] });
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(canal);
+    };
+  }, [queryClient]);
+
+  // Reloj para el SLA: recalcula vencimientos cada minuto
+  const [ahora, setAhora] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setAhora(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   const reviewerEmail = user?.email || 'admin@upeu.edu.pe';
 
@@ -180,14 +200,15 @@ const VisualizarReportes: React.FC<Props> = ({ areaIds }) => {
   };
 
   const stats = useMemo(() => {
-    const s = { all: reportes.length, docentes: 0, alumnos: 0, pending: 0, in_progress: 0, resolved: 0 };
+    const s = { all: reportes.length, docentes: 0, alumnos: 0, pending: 0, in_progress: 0, resolved: 0, vencidos: 0 };
     for (const r of reportes) {
+      if (slaDe(r, ahora)?.vencido) s.vencidos++;
       if (r.es_docente) s.docentes++;
       else s.alumnos++;
       if (r.status in s) s[r.status]++;
     }
     return s;
-  }, [reportes]);
+  }, [reportes, ahora]);
 
   const filteredReportes = useMemo(() => {
     const q = normalize(deferredSearch.trim());
@@ -199,14 +220,16 @@ const VisualizarReportes: React.FC<Props> = ({ areaIds }) => {
             ? r.es_docente === true
             : filter === 'alumnos'
               ? !r.es_docente
-              : r.status === filter;
+              : filter === 'vencidos'
+                ? !!slaDe(r, ahora)?.vencido
+                : r.status === filter;
       if (!matchesFilter) return false;
       if (!q) return true;
       return normalize(
         [r.alumno_nombre, r.alumno_dni, String(r.alumno_codigo), r.area_nombre, r.docente_nombre].filter(Boolean).join(' ')
       ).includes(q);
     });
-  }, [reportes, filter, deferredSearch]);
+  }, [reportes, filter, deferredSearch, ahora]);
 
   // Docentes primero (prioridad); no se usa la columna `prioridad` porque es texto y no siempre viene
   const groups = useMemo(() => {
@@ -223,6 +246,7 @@ const VisualizarReportes: React.FC<Props> = ({ areaIds }) => {
     { key: 'pending', label: 'Recibidos', count: stats.pending, dot: STATUS.pending.dot },
     { key: 'in_progress', label: 'En proceso', count: stats.in_progress, dot: STATUS.in_progress.dot },
     { key: 'resolved', label: 'Resueltos', count: stats.resolved, dot: STATUS.resolved.dot },
+    { key: 'vencidos', label: 'Vencidos', count: stats.vencidos, icon: AlarmClock },
     { key: 'docentes', label: 'Docentes', count: stats.docentes, icon: BriefcaseBusiness },
     { key: 'alumnos', label: 'Alumnos', count: stats.alumnos, icon: GraduationCap },
   ];
@@ -244,14 +268,7 @@ const VisualizarReportes: React.FC<Props> = ({ areaIds }) => {
             : 'Reportes de alumnos y docentes de tus áreas asignadas.'
         }
         actions={
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setRefreshing(true);
-              loadReportes();
-            }}
-            disabled={refreshing}
-          >
+          <Button variant="secondary" onClick={() => loadReportes()} disabled={refreshing}>
             <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} /> Actualizar
           </Button>
         }
@@ -354,6 +371,8 @@ const VisualizarReportes: React.FC<Props> = ({ areaIds }) => {
           {g.items.map((reporte) => {
             const s = STATUS[reporte.status] ?? STATUS.pending;
             const Avatar = reporte.es_docente ? BriefcaseBusiness : GraduationCap;
+            const sla = slaDe(reporte, ahora);
+            const fd = reporte.form_data ?? {};
             return (
               <li key={reporte.id} className={reporte.es_docente ? 'relative bg-amber-50/60 before:absolute before:inset-y-0 before:left-0 before:w-1 before:bg-amber-400' : ''}>
                 <div
@@ -395,6 +414,31 @@ const VisualizarReportes: React.FC<Props> = ({ areaIds }) => {
                       <span className="rounded-full bg-brand-900/5 px-2.5 py-0.5 text-xs font-medium text-brand-900">
                         {reporte.area_nombre}
                       </span>
+                      {fd.canal === 'whatsapp' ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs text-emerald-800">
+                          <MessageCircle className="h-3 w-3" /> WhatsApp
+                        </span>
+                      ) : null}
+                      {sla?.vencido ? (
+                        <span
+                          className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-200"
+                          title={`Tiempo objetivo: ${sla.limiteHoras} h`}
+                        >
+                          <AlarmClock className="h-3 w-3" /> Vencido hace {duracionCorta(sla.restanteMs)}
+                        </span>
+                      ) : sla?.porVencer ? (
+                        <span
+                          className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-800"
+                          title={`Tiempo objetivo: ${sla.limiteHoras} h`}
+                        >
+                          <AlarmClock className="h-3 w-3" /> Vence en {duracionCorta(sla.restanteMs)}
+                        </span>
+                      ) : null}
+                      {typeof fd.satisfaccion === 'number' ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs text-amber-800" title="Calificación del usuario">
+                          <Star className="h-3 w-3 fill-current" /> {fd.satisfaccion}/5
+                        </span>
+                      ) : null}
                     </div>
 
                     <div className="mt-2 flex items-center gap-2">

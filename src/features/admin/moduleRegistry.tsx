@@ -1,5 +1,5 @@
 import { lazy, type ComponentType, type LazyExoticComponent } from 'react';
-import { BookOpen, Building2, FileText, GraduationCap, LayoutGrid, MessageSquare, Users, type LucideIcon } from 'lucide-react';
+import { BookOpen, Building2, FileText, GraduationCap, LayoutGrid, MessageCircle, MessageSquare, Users, type LucideIcon } from 'lucide-react';
 import type { ModuleKey } from '../auth/modules';
 
 /**
@@ -13,5 +13,6 @@ export const MODULE_VIEWS: Record<ModuleKey, { icon: LucideIcon; component: Lazy
   alumnos: { icon: GraduationCap, component: lazy(() => import('../alumnos/components/GestionDatosAlumnos')) },
   docentes: { icon: BookOpen, component: lazy(() => import('../docentes/components/GestionDocentes')) },
   chatbot: { icon: MessageSquare, component: lazy(() => import('../chatbot/components/ConfiguracionChatbot')) },
+  whatsapp: { icon: MessageCircle, component: lazy(() => import('../whatsapp/components/MensajesWhatsApp')) },
   usuarios: { icon: Users, component: lazy(() => import('../usuarios/components/GestionUsuarios')) },
 };

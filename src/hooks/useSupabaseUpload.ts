@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { errorMessage } from '../utils/errors';
 
 interface UploadOptions {
   folder?: string;
@@ -63,9 +64,9 @@ export const useSupabaseUpload = () => {
       setUploading(false);
 
       return urlData.publicUrl;
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error al subir imagen:', err);
-      setError(err.message || 'Error al subir la imagen');
+      setError(errorMessage(err, 'Error al subir la imagen'));
       setUploading(false);
       return null;
     }
@@ -91,9 +92,9 @@ export const useSupabaseUpload = () => {
       }
 
       return true;
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error al eliminar imagen:', err);
-      setError(err.message || 'Error al eliminar la imagen');
+      setError(errorMessage(err, 'Error al eliminar la imagen'));
       return false;
     }
   };

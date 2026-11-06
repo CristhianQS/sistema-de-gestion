@@ -4,6 +4,7 @@ import { chatbotConfig, actualizarConfig } from '../config/chatbotPrompts';
 import * as OpenAIService from '../services/openai.service';
 import { getAllAreasUnpaginated } from '../../../services/database/areas.service';
 import { getAllPabellones, getSalonesByPabellon } from '../../../services/database/pabellones.service';
+import type { Pabellon, Salon } from '../../../services/database/pabellones.service';
 import { getStudentByCode } from '../../../services/database/students.service';
 import { getDocenteByDni } from '../../../services/database/docentes.service';
 import type { Docente } from '../../../services/database/docentes.service';
@@ -12,6 +13,7 @@ import { loadChatbotConfig } from '../../../services/database/chatbot-config.ser
 import { getAllAreaFields } from '../../../services/database/area-fields.service';
 import SupabaseImageUploader from '../../../components/SupabaseImageUploader';
 import { supabase } from '../../../lib/supabase';
+import { errorMessage } from '../../../utils/errors';
 
 interface Message {
   id: string;
@@ -28,11 +30,21 @@ interface ConversationState {
   selectedArea: Area | null;
   description: string;
   location: string;
-  selectedPabellon?: any;
-  selectedSalon?: any;
-  problemaDetectado?: any;
-  imageFields?: any[];
+  selectedPabellon?: Pabellon;
+  selectedSalon?: Salon;
+  problemaDetectado?: ProblemaDetectado;
+  imageFields?: AreaField[];
   uploadedImages?: Record<string, string>;
+}
+
+/** Lo que la IA entendió del problema (se guarda en ia_metadata del reporte) */
+interface ProblemaDetectado {
+  descripcion?: string;
+  ubicacion?: string | null;
+  urgencia?: string;
+  detallesAdicionales?: Record<string, unknown>;
+  confianza?: number;
+  mensajeOriginal?: string;
 }
 
 const ChatbotAsistente: React.FC = () => {
@@ -50,10 +62,10 @@ const ChatbotAsistente: React.FC = () => {
     location: ''
   });
   const [areas, setAreas] = useState<Area[]>([]);
-  const [pabellones, setPabellones] = useState<any[]>([]);
-  const [salones, setSalones] = useState<any[]>([]);
+  const [pabellones, setPabellones] = useState<Pabellon[]>([]);
+  const [salones, setSalones] = useState<Salon[]>([]);
   const [aiEnabled, setAiEnabled] = useState(false);
-  const [imageFields, setImageFields] = useState<any[]>([]);
+  const [imageFields, setImageFields] = useState<AreaField[]>([]);
   const [currentImageFieldIndex, setCurrentImageFieldIndex] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -98,13 +110,6 @@ const ChatbotAsistente: React.FC = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-
-  useEffect(() => {
-    if (isOpen && messages.length === 0) {
-      // Mensaje de bienvenida más simple, esperando que el usuario salude primero
-      addBotMessage('¡Hola! 👋 Bienvenido al Asistente Virtual de la UPeU Juliaca. ¿En qué puedo ayudarte hoy?');
-    }
-  }, [isOpen]);
 
   const loadAreas = async () => {
     try {
@@ -165,6 +170,14 @@ const ChatbotAsistente: React.FC = () => {
       setIsTyping(false);
       addMessage('bot', content);
     }, delay);
+  };
+
+  // Al abrir por primera vez, saludo de bienvenida (en el evento, no en un efecto)
+  const handleOpen = () => {
+    setIsOpen(true);
+    if (messages.length === 0) {
+      addBotMessage('¡Hola! 👋 Bienvenido al Asistente Virtual de la UPeU Juliaca. ¿En qué puedo ayudarte hoy?');
+    }
   };
 
   const buscarAlumnoPorCodigo = async (codigo: string): Promise<DataAlumno | null> => {
@@ -246,9 +259,9 @@ const ChatbotAsistente: React.FC = () => {
         description: '',
         location: ''
       });
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error al crear reporte:', error);
-      addBotMessage(chatbotConfig.confirmaciones.errorCrearReporte(error.message));
+      addBotMessage(chatbotConfig.confirmaciones.errorCrearReporte(errorMessage(error)));
     }
   };
 
@@ -936,7 +949,7 @@ const ChatbotAsistente: React.FC = () => {
       {/* Botón flotante */}
       {!isOpen && (
         <button
-          onClick={() => setIsOpen(true)}
+          onClick={handleOpen}
           className="fixed bottom-6 right-6 z-50 w-14 h-14 bg-brand-700 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 flex items-center justify-center"
           title="Abrir chatbot"
         >

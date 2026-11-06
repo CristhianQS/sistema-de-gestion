@@ -10,8 +10,11 @@ const VENDOR_CHUNKS: Record<string, string[]> = {
 }
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react()],
+  // En producción se eliminan console.log/info/debug (hay ~30 de depuración);
+  // console.warn y console.error se conservan para diagnosticar fallas.
+  esbuild: mode === 'production' ? { pure: ['console.log', 'console.info', 'console.debug'], drop: ['debugger'] } : {},
   build: {
     rollupOptions: {
       output: {
@@ -25,4 +28,4 @@ export default defineConfig({
       },
     },
   },
-})
+}))

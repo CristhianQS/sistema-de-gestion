@@ -140,13 +140,7 @@ export function isEmpty(obj: object): boolean {
  * Elimina propiedades undefined de un objeto
  */
 export function removeUndefined<T extends object>(obj: T): Partial<T> {
-  const result: any = {};
-  for (const [key, value] of Object.entries(obj)) {
-    if (value !== undefined) {
-      result[key] = value;
-    }
-  }
-  return result;
+  return Object.fromEntries(Object.entries(obj).filter(([, value]) => value !== undefined)) as Partial<T>;
 }
 
 // ============================================================================

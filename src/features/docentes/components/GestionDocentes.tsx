@@ -1,10 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
 import { useModuleAccess } from '../../auth/ModuleAccessContext';
 // xlsx (~400 KB) se carga solo al importar/exportar Excel
 const loadXLSX = () => import('xlsx');
 import { Users, Upload, Download, Plus, Edit2, Trash2, Search, X, Save, FileSpreadsheet, AlertCircle, CheckCircle } from 'lucide-react';
 import * as docentesService from '../../../services/database/docentes.service';
 import type { Docente } from '../../../services/database/docentes.service';
+import { errorMessage } from '../../../utils/errors';
+
+const ESTADOS: NonNullable<Docente['estado']>[] = ['activo', 'inactivo', 'licencia'];
+/** Estado válido del docente (por defecto "activo") */
+const parseEstado = (v: unknown): NonNullable<Docente['estado']> =>
+  ESTADOS.find((e) => e === String(v ?? '').trim().toLowerCase()) ?? 'activo';
 
 const GestionDocentes: React.FC = () => {
   const { canEdit } = useModuleAccess();
@@ -43,24 +50,27 @@ const GestionDocentes: React.FC = () => {
     errors: { row: number; dni: string; error: string }[];
   } | null>(null);
 
-  useEffect(() => {
-    loadDocentes();
-  }, [currentPage, searchTerm]);
+  // Espera 300 ms sin teclear antes de consultar (antes: una consulta por tecla)
+  const debouncedSearch = useDebouncedValue(searchTerm);
 
-  const loadDocentes = async () => {
+  const loadDocentes = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
-      const { data, count } = await docentesService.getAllDocentes(currentPage, pageSize, searchTerm);
+      const { data, count } = await docentesService.getAllDocentes(currentPage, pageSize, debouncedSearch);
       setDocentes(data);
       setTotalCount(count);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error al cargar docentes:', err);
-      setError(err.message || 'Error al cargar docentes');
+      setError(errorMessage(err, 'Error al cargar docentes'));
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, pageSize, debouncedSearch]);
+
+  useEffect(() => {
+    loadDocentes();
+  }, [loadDocentes]);
 
   const handleOpenModal = (docente?: Docente) => {
     if (docente) {
@@ -149,9 +159,9 @@ const GestionDocentes: React.FC = () => {
         handleCloseModal();
         setSuccess('');
       }, 1500);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error al guardar docente:', err);
-      setError(err.message || 'Error al guardar docente');
+      setError(errorMessage(err, 'Error al guardar docente'));
     }
   };
 
@@ -165,9 +175,9 @@ const GestionDocentes: React.FC = () => {
       setSuccess('Docente eliminado correctamente');
       await loadDocentes();
       setTimeout(() => setSuccess(''), 3000);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error al eliminar docente:', err);
-      setError(err.message || 'Error al eliminar docente');
+      setError(errorMessage(err, 'Error al eliminar docente'));
       setTimeout(() => setError(''), 3000);
     }
   };
@@ -215,10 +225,10 @@ const GestionDocentes: React.FC = () => {
       const [XLSX, data] = await Promise.all([loadXLSX(), file.arrayBuffer()]);
       const workbook = XLSX.read(data);
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet) as any[];
+      const jsonData = XLSX.utils.sheet_to_json<Record<string, string | number | undefined>>(worksheet);
 
       // Mapear datos
-      const docentesData: Omit<Docente, 'id' | 'created_at' | 'updated_at'>[] = jsonData.map((row: any) => ({
+      const docentesData: Omit<Docente, 'id' | 'created_at' | 'updated_at'>[] = jsonData.map((row) => ({
         nombres: row.nombres?.toString().trim() || '',
         apellidos: row.apellidos?.toString().trim() || '',
         dni: row.dni?.toString().trim() || '',
@@ -226,7 +236,7 @@ const GestionDocentes: React.FC = () => {
         telefono: row.telefono?.toString().trim() || undefined,
         especialidad: row.especialidad?.toString().trim() || undefined,
         departamento: row.departamento?.toString().trim() || undefined,
-        estado: (row.estado?.toString().trim() as any) || 'activo',
+        estado: parseEstado(row.estado),
         fecha_ingreso: row.fecha_ingreso?.toString().trim() || undefined
       }));
 
@@ -241,9 +251,9 @@ const GestionDocentes: React.FC = () => {
       }
 
       await loadDocentes();
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error al importar:', err);
-      setError(err.message || 'Error al importar el archivo');
+      setError(errorMessage(err, 'Error al importar el archivo'));
     } finally {
       setImporting(false);
       e.target.value = ''; // Reset input
@@ -274,7 +284,7 @@ const GestionDocentes: React.FC = () => {
       XLSX.writeFile(workbook, `docentes_${new Date().toISOString().split('T')[0]}.xlsx`);
       setSuccess('Docentes exportados correctamente');
       setTimeout(() => setSuccess(''), 3000);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error al exportar:', err);
       setError('Error al exportar docentes');
       setTimeout(() => setError(''), 3000);
@@ -628,7 +638,7 @@ const GestionDocentes: React.FC = () => {
                     </label>
                     <select
                       value={formData.estado}
-                      onChange={(e) => setFormData({ ...formData, estado: e.target.value as any })}
+                      onChange={(e) => setFormData({ ...formData, estado: parseEstado(e.target.value) })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:border-transparent"
                     >
                       <option value="activo">Activo</option>

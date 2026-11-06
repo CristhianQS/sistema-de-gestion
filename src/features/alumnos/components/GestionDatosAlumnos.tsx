@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useModuleAccess } from '../../auth/ModuleAccessContext';
 import { supabase } from '../../../lib/supabase';
+import { errorMessage } from '../../../utils/errors';
 // xlsx (~400 KB) se carga solo al importar/exportar Excel
 const loadXLSX = () => import('xlsx');
 
@@ -24,7 +25,6 @@ interface DataAlumno {
 const GestionDatosAlumnos: React.FC = () => {
   const { canEdit } = useModuleAccess();
   const [alumnos, setAlumnos] = useState<DataAlumno[]>([]);
-  const [filteredAlumnos, setFilteredAlumnos] = useState<DataAlumno[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAlumno, setSelectedAlumno] = useState<DataAlumno | null>(null);
@@ -40,10 +40,6 @@ const GestionDatosAlumnos: React.FC = () => {
   useEffect(() => {
     loadAlumnos();
   }, []);
-
-  useEffect(() => {
-    filterAlumnos();
-  }, [searchTerm, filterFacultad, filterCarrera, alumnos]);
 
   useEffect(() => {
     // Resetear a la página 1 cuando cambien los filtros
@@ -98,16 +94,17 @@ const GestionDatosAlumnos: React.FC = () => {
 
       console.log('Todos los alumnos cargados exitosamente:', allData.length);
       setAlumnos(allData);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error al cargar alumnos:', error);
-      setUploadError(`Error al cargar alumnos: ${error.message || 'Error desconocido'}`);
+      setUploadError(`Error al cargar alumnos: ${errorMessage(error, 'Error desconocido')}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const filterAlumnos = () => {
-    let filtered = [...alumnos];
+  // Lista filtrada derivada (antes: estado + useEffect, que hacía un render extra)
+  const filteredAlumnos = useMemo(() => {
+    let filtered = alumnos;
 
     // Filtrar por término de búsqueda
     if (searchTerm.trim()) {
@@ -132,8 +129,8 @@ const GestionDatosAlumnos: React.FC = () => {
       filtered = filtered.filter((alumno) => alumno.carrera_profesional === filterCarrera);
     }
 
-    setFilteredAlumnos(filtered);
-  };
+    return filtered;
+  }, [alumnos, searchTerm, filterFacultad, filterCarrera]);
 
   const getFacultades = () => {
     const facultades = new Set(alumnos.map((a) => a.facultad).filter(Boolean));
@@ -212,7 +209,7 @@ const GestionDatosAlumnos: React.FC = () => {
       const [XLSX, data] = await Promise.all([loadXLSX(), file.arrayBuffer()]);
       const workbook = XLSX.read(data);
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+      const jsonData = XLSX.utils.sheet_to_json<Record<string, string | number | undefined>>(worksheet);
 
       if (jsonData.length === 0) {
         setUploadError('El archivo está vacío');
@@ -221,7 +218,7 @@ const GestionDatosAlumnos: React.FC = () => {
       }
 
       // Validar y preparar datos
-      const alumnosToInsert = jsonData.map((row: any) => ({
+      const alumnosToInsert = jsonData.map((row) => ({
         dni: row.dni ? String(row.dni) : null,
         codigo: row.codigo ? Number(row.codigo) : null,
         estudiante: row.estudiante || null,
@@ -253,9 +250,9 @@ const GestionDatosAlumnos: React.FC = () => {
       }
 
       setTimeout(() => setUploadSuccess(''), 5000);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error al cargar archivo:', error);
-      setUploadError(error.message || 'Error al procesar el archivo Excel');
+      setUploadError(errorMessage(error, 'Error al procesar el archivo Excel'));
     } finally {
       setUploading(false);
     }

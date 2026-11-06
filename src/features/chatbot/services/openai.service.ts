@@ -266,19 +266,19 @@ Respuesta:`;
 export async function generarRespuestaContextual(
   mensajeUsuario: string,
   pasoActual: string,
-  contexto?: any
+  contexto?: { areas?: string; areaNombre?: string }
 ): Promise<string> {
   try {
     let instruccion = '';
 
     switch (pasoActual) {
       case 'waiting_area':
-        instruccion = `El usuario debe seleccionar un área. Áreas disponibles: ${contexto.areas}
+        instruccion = `El usuario debe seleccionar un área. Áreas disponibles: ${contexto?.areas ?? ''}
 Genera una respuesta amigable explicando que debe elegir el número del área que corresponda a su problema.`;
         break;
 
       case 'waiting_description':
-        instruccion = `El usuario debe describir su problema en el área: ${contexto.areaNombre}
+        instruccion = `El usuario debe describir su problema en el área: ${contexto?.areaNombre ?? ''}
 Genera una respuesta amigable solicitando que describa el problema con detalle (qué pasó, cuándo, si es urgente).`;
         break;
 
@@ -615,7 +615,7 @@ export async function extraerInformacionCompleta(
   descripcion: string;
   ubicacion: string | null;
   urgencia: 'baja' | 'media' | 'alta';
-  detallesAdicionales: any;
+  detallesAdicionales: Record<string, unknown>;
 }> {
   try {
     const prompt = `El usuario reportó este problema en el área "${area.name}":

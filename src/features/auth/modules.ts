@@ -10,7 +10,7 @@ export type Role = 'super_admin' | 'admin';
 export type Access = 'view' | 'edit';
 
 /** Módulos que el super admin puede asignar (coinciden con el CHECK de admin_modules) */
-export const ASSIGNABLE_MODULES = ['reportes', 'areas', 'pabellones', 'alumnos', 'docentes', 'chatbot'] as const;
+export const ASSIGNABLE_MODULES = ['reportes', 'areas', 'pabellones', 'alumnos', 'docentes', 'chatbot', 'whatsapp'] as const;
 export type AssignableModule = (typeof ASSIGNABLE_MODULES)[number];
 
 /** Usuarios y permisos: exclusivo del super admin (evita que un admin se dé más permisos) */
@@ -30,7 +30,8 @@ export const MODULES: ModuleDef[] = [
   { key: 'pabellones', label: 'Pabellones', description: 'Pabellones y salones del campus', supportsView: true },
   { key: 'alumnos', label: 'Alumnos', description: 'Datos de estudiantes e importación Excel', supportsView: true },
   { key: 'docentes', label: 'Docentes', description: 'Datos de docentes e importación Excel', supportsView: true },
-  { key: 'chatbot', label: 'Chatbot', description: 'Mensajes y comportamiento del asistente', supportsView: true },
+  { key: 'chatbot', label: 'Chatbot', description: 'Mensajes del asistente y prompt para BuilderBot', supportsView: true },
+  { key: 'whatsapp', label: 'WhatsApp', description: 'Mensajes que llegan al bot de WhatsApp', supportsView: true },
   { key: 'usuarios', label: 'Usuarios y permisos', description: 'Cuentas, módulos y áreas de cada admin', supportsView: false },
 ];
 

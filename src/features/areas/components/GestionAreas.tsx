@@ -5,6 +5,7 @@ import GestionCamposArea from './GestionCamposArea';
 import SupabaseImageUploader from '../../../components/SupabaseImageUploader';
 import { FolderOpen, Plus, Edit2, Trash2, X, Save, FileText, Image as ImageIcon } from 'lucide-react';
 import { IMAGE_CONFIG } from '../../../constants';
+import { errorCode, errorMessage } from '../../../utils/errors';
 
 interface Area {
   id: number;
@@ -138,9 +139,9 @@ const GestionAreas: React.FC = () => {
       setTimeout(() => {
         handleCloseModal();
       }, 1000);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error:', error);
-      setError('Error al guardar: ' + (error.message || 'Error desconocido'));
+      setError('Error al guardar: ' + (errorMessage(error, 'Error desconocido')));
     } finally {
       setSaving(false);
     }
@@ -178,16 +179,16 @@ const GestionAreas: React.FC = () => {
       setSuccess('✅ Área eliminada correctamente');
       await loadAreas();
       setTimeout(() => setSuccess(''), 3000);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error:', error);
 
-      if (error.code === '23503') {
+      if (errorCode(error) === '23503') {
         setError(
           `No se puede eliminar el área "${area.name}" porque tiene usuarios asignados. ` +
           `Elimina o reasigna los usuarios primero.`
         );
       } else {
-        setError(error.message || 'Error al eliminar el área');
+        setError(errorMessage(error, 'Error al eliminar el área'));
       }
 
       setTimeout(() => setError(''), 5000);

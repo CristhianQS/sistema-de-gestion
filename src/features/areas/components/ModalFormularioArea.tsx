@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../../lib/supabase';
 import ModalSeleccionarUbicacion from '../../pabellones/components/ModalSeleccionarUbicacion';
 import SupabaseImageUploader from '../../../components/SupabaseImageUploader';
 import { createDocenteSubmission } from '../../../services/database/submissions.service';
 import type { Docente } from '../../../services/database/docentes.service';
+import { errorMessage } from '../../../utils/errors';
 
 interface DataAlumno {
   id: number;
@@ -59,6 +60,8 @@ interface Props {
   areaId: number;
   areaName: string;
   verifiedUser: VerifiedUser;
+  /** Ubicación ya elegida (por ejemplo, al llegar escaneando el QR de un salón) */
+  ubicacionInicial?: { pabellon: Pabellon; salon: Salon } | null;
 }
 
 interface SelectionOption {
@@ -70,29 +73,25 @@ interface SelectionOption {
   order_index: number;
 }
 
-const ModalFormularioArea: React.FC<Props> = ({ isOpen, onClose, areaId, areaName, verifiedUser }) => {
+type FormValue = string | number | null;
+type FormValues = Record<string, FormValue>;
+
+const ModalFormularioArea: React.FC<Props> = ({ isOpen, onClose, areaId, areaName, verifiedUser, ubicacionInicial }) => {
   // Extraer datos del usuario verificado
   const isDocente = verifiedUser.tipo === 'docente';
   const userData = verifiedUser.data;
   const [fields, setFields] = useState<AreaField[]>([]);
-  const [formData, setFormData] = useState<Record<string, any>>({});
+  const [formData, setFormData] = useState<FormValues>({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [isUbicacionModalOpen, setIsUbicacionModalOpen] = useState(false);
-  const [selectedPabellon, setSelectedPabellon] = useState<Pabellon | null>(null);
-  const [selectedSalon, setSelectedSalon] = useState<Salon | null>(null);
+  const [selectedPabellon, setSelectedPabellon] = useState<Pabellon | null>(ubicacionInicial?.pabellon ?? null);
+  const [selectedSalon, setSelectedSalon] = useState<Salon | null>(ubicacionInicial?.salon ?? null);
   const [selectionOptions, setSelectionOptions] = useState<SelectionOption[]>([]);
 
-  useEffect(() => {
-    if (isOpen) {
-      loadFields();
-      loadSelectionOptions();
-    }
-  }, [isOpen, areaId]);
-
-  const loadFields = async () => {
+  const loadFields = useCallback(async () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -109,9 +108,9 @@ const ModalFormularioArea: React.FC<Props> = ({ isOpen, onClose, areaId, areaNam
     } finally {
       setLoading(false);
     }
-  };
+  }, [areaId]);
 
-  const loadSelectionOptions = async () => {
+  const loadSelectionOptions = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('selection_options')
@@ -124,9 +123,16 @@ const ModalFormularioArea: React.FC<Props> = ({ isOpen, onClose, areaId, areaNam
     } catch (error) {
       console.error('Error al cargar opciones de selección:', error);
     }
-  };
+  }, [areaId]);
 
-  const handleInputChange = (fieldName: string, value: any) => {
+  useEffect(() => {
+    if (isOpen) {
+      loadFields();
+      loadSelectionOptions();
+    }
+  }, [isOpen, loadFields, loadSelectionOptions]);
+
+  const handleInputChange = (fieldName: string, value: FormValue) => {
     setFormData({
       ...formData,
       [fieldName]: value
@@ -178,7 +184,7 @@ const ModalFormularioArea: React.FC<Props> = ({ isOpen, onClose, areaId, areaNam
         const docenteData = userData as Docente;
         const submissionData = {
           area_id: areaId,
-          alumno_id: null as any, // NULL para docentes (no aplica)
+          alumno_id: null, // NULL para docentes (no aplica)
           alumno_dni: docenteData.dni || '',
           alumno_codigo: 0,
           alumno_nombre: `${docenteData.nombres} ${docenteData.apellidos}`,
@@ -222,9 +228,9 @@ const ModalFormularioArea: React.FC<Props> = ({ isOpen, onClose, areaId, areaNam
       setTimeout(() => {
         handleClose();
       }, 2000);
-    } catch (error: any) {
+    } catch (error) {
       console.error('❌ Error:', error);
-      setError(error.message || 'Error al enviar el formulario');
+      setError(errorMessage(error, 'Error al enviar el formulario'));
     } finally {
       setSubmitting(false);
     }
@@ -348,7 +354,7 @@ const ModalFormularioArea: React.FC<Props> = ({ isOpen, onClose, areaId, areaNam
         // Usar SupabaseImageUploader
         return (
           <SupabaseImageUploader
-            currentImageUrl={formData[field.field_name] || ''}
+            currentImageUrl={String(formData[field.field_name] ?? '')}
             onImageUploaded={(url) => handleInputChange(field.field_name, url)}
             onImageRemoved={() => handleInputChange(field.field_name, '')}
             folder="formularios"

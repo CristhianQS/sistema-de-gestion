@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useModuleAccess } from '../../auth/ModuleAccessContext';
 import { chatbotConfig, actualizarConfig } from '../config/chatbotPrompts';
 import { saveChatbotConfig, loadChatbotConfig, deleteChatbotConfig } from '../../../services/database/chatbot-config.service';
+import PromptBuilderBot from './PromptBuilderBot';
 
 /**
  * Componente para configurar los prompts del chatbot desde la interfaz
@@ -132,6 +133,8 @@ const ConfiguracionChatbot: React.FC = () => {
           {error}
         </div>
       )}
+
+      <PromptBuilderBot config={config} />
 
       {/* Solo lectura: fieldset deshabilita todos los campos */}
       <fieldset disabled={!canEdit} className="space-y-6">

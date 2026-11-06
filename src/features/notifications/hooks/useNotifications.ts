@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import * as notificationsService from '../../../services/database/notifications.service';
 import type { Notification } from '../../../services/database/notifications.service';
+import { errorMessage } from '../../../utils/errors';
 
 interface UseNotificationsReturn {
   notifications: Notification[];
@@ -18,7 +19,7 @@ interface UseNotificationsReturn {
  */
 function playNotificationSound() {
   try {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const audioContext = new (window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext!)();
 
     // Crear oscilador para el sonido
     const oscillator = audioContext.createOscillator();
@@ -84,9 +85,9 @@ export function useNotifications(userEmail: string | null): UseNotificationsRetu
 
       setNotifications(allNotifications);
       setUnreadCount(count);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error al cargar notificaciones:', err);
-      setError(err.message || 'Error al cargar notificaciones');
+      setError(errorMessage(err, 'Error al cargar notificaciones'));
     } finally {
       setLoading(false);
     }
@@ -107,9 +108,9 @@ export function useNotifications(userEmail: string | null): UseNotificationsRetu
       if ('Notification' in window && Notification.permission === 'granted') {
         // No mostrar notificación push al marcar como leída
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error al marcar como leída:', err);
-      setError(err.message);
+      setError(errorMessage(err));
     }
   }, []);
 
@@ -125,9 +126,9 @@ export function useNotifications(userEmail: string | null): UseNotificationsRetu
         prev.map(n => ({ ...n, read: true, read_at: n.read_at || new Date().toISOString() }))
       );
       setUnreadCount(0);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error al marcar todas como leídas:', err);
-      setError(err.message);
+      setError(errorMessage(err));
     }
   }, [userEmail]);
 
@@ -143,9 +144,9 @@ export function useNotifications(userEmail: string | null): UseNotificationsRetu
       if (deletedNotification && !deletedNotification.read) {
         setUnreadCount(prev => Math.max(0, prev - 1));
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error al eliminar notificación:', err);
-      setError(err.message);
+      setError(errorMessage(err));
     }
   }, [notifications]);
 

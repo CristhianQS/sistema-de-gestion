@@ -54,9 +54,9 @@ export const chatbotConfig: ChatbotConfig = {
   // MENSAJES DE BIENVENIDA Y ESTADO
   // =====================================================
   mensajes: {
-    bienvenida: `¡Bienvenido al chatbot de asuntos académicos! 👋
+    bienvenida: `¡Hola! 👋 Soy el asistente de reportes de la UPeU Juliaca.
 
-Por favor, ingresa tu código de estudiante para comenzar.`,
+Envíame tu código de estudiante o tu DNI (solo números) para empezar.`,
 
     esperandoCodigo: 'Por favor, ingresa tu código de estudiante.',
 
@@ -157,8 +157,8 @@ Por favor, intenta nuevamente o contacta con soporte técnico si el problema per
   // PROMPTS DEL SISTEMA (Para IA Futura - OpenAI)
   // =====================================================
   sistemPrompts: {
-    rol: `Eres un asistente virtual de una universidad peruana llamado "Asistente UPEU".
-Tu función es ayudar a los estudiantes a crear reportes de problemas académicos o de infraestructura.`,
+    rol: `Eres el "Asistente UPeU", el asistente virtual de la Universidad Peruana Unión, campus Juliaca.
+Tu función es ayudar a alumnos y docentes a reportar problemas académicos o de infraestructura del campus.`,
 
     objetivo: `Tu objetivo es:
 1. Recopilar información del estudiante de manera amigable
@@ -186,12 +186,11 @@ Tu función es ayudar a los estudiantes a crear reportes de problemas académico
 /**
  * Función helper para obtener un mensaje configurado
  */
-export function getMensaje(clave: string, ...args: any[]): string {
-  const path = clave.split('.');
-  let valor: any = chatbotConfig;
+export function getMensaje(clave: string, ...args: (string | number)[]): string {
+  let valor: unknown = chatbotConfig;
 
-  for (const key of path) {
-    valor = valor[key];
+  for (const key of clave.split('.')) {
+    valor = valor && typeof valor === 'object' ? (valor as Record<string, unknown>)[key] : undefined;
     if (valor === undefined) {
       console.error(`Mensaje no encontrado: ${clave}`);
       return `[Mensaje no configurado: ${clave}]`;
@@ -199,10 +198,10 @@ export function getMensaje(clave: string, ...args: any[]): string {
   }
 
   if (typeof valor === 'function') {
-    return valor(...args);
+    return String((valor as (...a: (string | number)[]) => unknown)(...args));
   }
 
-  return valor;
+  return String(valor);
 }
 
 /**

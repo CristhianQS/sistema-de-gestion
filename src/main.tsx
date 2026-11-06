@@ -10,10 +10,12 @@ import ErrorBoundary from './components/ErrorBoundary.tsx'
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutos - datos considerados frescos
+      // Mesa de ayuda: los reportes cambian seguido. 30 s de caché y, al volver a una
+      // pantalla, se recarga en segundo plano si los datos son más viejos.
+      staleTime: 1000 * 30,
       gcTime: 1000 * 60 * 10, // 10 minutos - tiempo en caché después de no usarse
       refetchOnWindowFocus: false, // No refetch al cambiar de pestaña
-      refetchOnMount: false, // No refetch al montar si hay datos en caché
+      refetchOnMount: true,
       retry: 1, // Solo reintentar 1 vez en caso de error
     },
   },
